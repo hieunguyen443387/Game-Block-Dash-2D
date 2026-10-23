@@ -1,0 +1,101 @@
+using UnityEngine;
+using UnityEditor;
+using System.Collections.Generic;
+
+public class BlockSpawner : MonoBehaviour
+{
+    [System.Serializable]
+    public class BlockOption
+    {
+        public string blockName;
+        public GameObject blockPrefab;
+    }
+
+    [Header("Block List")]
+    public List<BlockOption> blockList = new List<BlockOption>();
+
+    [Header("Spawn Settings")]
+    public int selectedBlockIndex = 0;
+    public Vector2 spawnPosition = Vector2.zero;
+    public float blockSizePixels = 36f;
+    public float pixelsPerUnit = 100f;
+
+    [Header("Active Blocks Tracking")]
+    // Danh sách lưu trữ các block đang hiển thị trong scene
+    [HideInInspector] public List<BlockItem> activeBlocks = new List<BlockItem>();
+
+    public void CreateBlock()
+    {
+        if (blockList.Count == 0)
+        {
+            Debug.LogWarning("Chua co Block nao trong danh sach!");
+            return;
+        }
+
+        if (selectedBlockIndex < 0 || selectedBlockIndex >= blockList.Count)
+        {
+            Debug.LogWarning("Vui long chon Block hop le!");
+            return;
+        }
+
+        GameObject prefab = blockList[selectedBlockIndex].blockPrefab;
+
+        if (prefab == null)
+        {
+            Debug.LogWarning("Block Prefab chua duoc gan!");
+            return;
+        }
+
+        GameObject newBlock = Instantiate(
+            prefab,
+            new Vector3(spawnPosition.x, spawnPosition.y, 0f),
+            Quaternion.identity
+        );
+
+        newBlock.name = blockList[selectedBlockIndex].blockName;
+
+        float size = blockSizePixels / pixelsPerUnit;
+        newBlock.transform.localScale = Vector3.one * size;
+
+        // Đảm bảo block có gắn component BlockItem
+        BlockItem blockItem = newBlock.GetComponent<BlockItem>();
+        if (blockItem != null)
+        {
+            if (!activeBlocks.Contains(blockItem))
+            {
+                activeBlocks.Add(blockItem);
+            }
+        }
+
+        Debug.Log("Da tao Block: " + newBlock.name);
+    }
+
+    // Hàm hỗ trợ xóa block khỏi danh sách quản lý khi nó bị hủy
+    public void RemoveBlockFromList(BlockItem blockItem)
+    {
+        if (activeBlocks.Contains(blockItem))
+        {
+            activeBlocks.Remove(blockItem);
+        }
+    }
+}
+
+#if UNITY_EDITOR
+[CustomEditor(typeof(BlockSpawner))]
+public class BlockSpawnerEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        DrawDefaultInspector();
+
+        BlockSpawner spawner = (BlockSpawner)target;
+
+        EditorGUILayout.Space();
+
+        if (GUILayout.Button("Create Block"))
+        {
+            spawner.CreateBlock();
+        }
+    }
+}
+#endif
