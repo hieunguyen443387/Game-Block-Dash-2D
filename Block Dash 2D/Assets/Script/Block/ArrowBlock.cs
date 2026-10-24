@@ -429,13 +429,22 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
 
         Vector2 startPos = transform.position;
         Vector2 currentCheckPos = startPos;
-        int currentCheckGridX = gridX;
-        int currentCheckGridY = gridY;
+        Vector2Int startGrid = GetGridPositionFromWorld(startPos);
+
+        int currentCheckGridX = startGrid.x;
+        int currentCheckGridY = startGrid.y;
 
         Vector2 targetWorldPos = startPos;
-        int targetGridX = gridX;
-        int targetGridY = gridY;
+        int targetGridX = startGrid.x;
+        int targetGridY = startGrid.y;
 
+        Debug.Log(
+            $"[GRID INIT] Block={name} | " +
+            $"World={startPos} | " +
+            $"Grid=({currentCheckGridX},{currentCheckGridY}) | " +
+            $"BoardCenter={boardCenter} | StepSize={stepSize}",
+            this
+        );
         bool canExitToSideline = false;
         Vector2 sidelineExitPos = Vector2.zero;
 
@@ -445,12 +454,16 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
 
         while (stepsCount < maxSafetySteps)
         {
+            Debug.Log($"[START MOVE] Block={name} | Direction={direction} | " +$"Transform={transform.position} | " +$"Grid=({gridX},{gridY}) | " +$"BoardSize=({boardColumns},{boardRows})",this);
             Vector2 nextWorldPos = currentCheckPos + dirVector * stepSize;
             int nextGridX = currentCheckGridX + gridStep.x;
             int nextGridY = currentCheckGridY + gridStep.y;
+            
 
             // Kiểm tra xem đã vượt ra ngoài biên bàn cờ chưa
-            bool isOutsideBoard = (nextGridX < 0 || nextGridX >= boardColumns || nextGridY < 0 || nextGridY >= boardRows);
+            bool isOutsideBoard = nextGridX < 0 || nextGridX >= boardColumns || nextGridY < 0 || nextGridY >= boardRows;
+
+            Debug.Log($"[GRID CHECK] Block={name} | Direction={direction} | " + $"CurrentGrid=({currentCheckGridX},{currentCheckGridY}) | " + $"NextGrid=({nextGridX},{nextGridY}) | " + $"BoardSize=({boardColumns},{boardRows}) | " + $"OutsideBoard={isOutsideBoard}",this);
 
             if (isOutsideBoard)
             {
@@ -484,11 +497,15 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
             // Kiểm tra Vật cản bằng OverlapBox (Block khác trên bàn cờ)
             Vector2 boxSize = new Vector2(stepSize * 0.75f, stepSize * 0.75f);
             Collider2D[] hits = Physics2D.OverlapBoxAll(nextWorldPos, boxSize, 0f, obstacleLayers);
+            Debug.Log($"Direction: {direction} | " + $"NextPos: {nextWorldPos} | " + $"Hits: {hits.Length}");      
             bool isBlocked = false;
 
             foreach (var hit in hits)
             {
-                if (hit == null) continue;
+                if (hit != null)
+                {
+                    Debug.Log($"Hit: {hit.name} | Layer: {LayerMask.LayerToName(hit.gameObject.layer)} | Position: {hit.bounds.center}");
+                }
                 if (ignoreTriggers && hit.isTrigger) continue;
                 if (hit != myCollider && hit.transform != transform && !hit.transform.IsChildOf(transform))
                 {
@@ -564,6 +581,23 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
 
         onMoveFinished?.Invoke();
         isMoving = false;
+    }
+
+    private Vector2Int GetGridPositionFromWorld(Vector2 worldPosition)
+    {
+        float stepSize = GetStepSize();
+
+        int x = Mathf.RoundToInt(
+            (worldPosition.x - boardCenter.x) / stepSize
+            + (boardColumns - 1) / 2f
+        );
+
+        int y = Mathf.RoundToInt(
+            (worldPosition.y - boardCenter.y) / stepSize
+            + (boardRows - 1) / 2f
+        );
+
+        return new Vector2Int(x, y);
     }
 
     /// <summary>

@@ -359,12 +359,22 @@ public class TwoWayBlock : BlockItem, IPointerDownHandler
 
         Vector2 startPos = transform.position;
         Vector2 currentCheckPos = startPos;
-        int currentCheckGridX = gridX;
-        int currentCheckGridY = gridY;
+        Vector2Int startGrid = GetGridPositionFromWorld(startPos);
+
+        int currentCheckGridX = startGrid.x;
+        int currentCheckGridY = startGrid.y;
 
         Vector2 targetWorldPos = startPos;
-        int targetGridX = gridX;
-        int targetGridY = gridY;
+        int targetGridX = startGrid.x;
+        int targetGridY = startGrid.y;
+
+        Debug.Log(
+            $"[GRID INIT] Block={name} | " +
+            $"World={startPos} | " +
+            $"Grid=({currentCheckGridX},{currentCheckGridY}) | " +
+            $"BoardCenter={boardCenter} | StepSize={stepSize}",
+            this
+        );
 
         bool canExitToSideline = false;
         Vector2 sidelineExitPos = Vector2.zero;
@@ -519,6 +529,23 @@ public class TwoWayBlock : BlockItem, IPointerDownHandler
         ToggleTwoWayDirection();
         isMoving = false;
     }
+
+    private Vector2Int GetGridPositionFromWorld(Vector2 worldPosition)
+    {
+        float stepSize = GetStepSize();
+
+        int x = Mathf.RoundToInt(
+            (worldPosition.x - boardCenter.x) / stepSize
+            + (boardColumns - 1) / 2f
+        );
+
+        int y = Mathf.RoundToInt(
+            (worldPosition.y - boardCenter.y) / stepSize
+            + (boardRows - 1) / 2f
+        );
+
+        return new Vector2Int(x, y);
+        }
 
     private IEnumerator NavigateAlongSidelineToGate(ExitGate exitGate, Vector2 initialLaneExitPos)
     {
