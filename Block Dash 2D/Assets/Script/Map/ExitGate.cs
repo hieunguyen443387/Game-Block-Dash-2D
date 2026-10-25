@@ -255,6 +255,53 @@ public class ExitGate : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Hiệu ứng trượt qua cổng dành cho RetreatArrowBlock
+    /// </summary>
+    public IEnumerator PlayExitAnimationRoutine(RetreatArrowBlock block)
+    {
+        if (block == null) yield break;
+
+        Collider2D col = block.GetComponent<Collider2D>();
+        if (col != null) col.enabled = false;
+
+        Vector3 startPos = block.transform.position;
+        Vector3 exitDirection = (Vector3)block.GetDirectionVector();
+        float stepSize = block.GetStepSize();
+        Vector3 targetExitPos = startPos + exitDirection * (stepSize * 1.5f);
+
+        Vector3 originalScale = block.transform.localScale;
+        SpriteRenderer sr = block.GetComponent<SpriteRenderer>();
+        Color startColor = (sr != null) ? sr.color : Color.white;
+
+        float duration = 0.25f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            block.transform.position = Vector3.Lerp(startPos, targetExitPos, t);
+            block.transform.localScale = Vector3.Lerp(originalScale, originalScale * 0.2f, t);
+
+            if (sr != null)
+            {
+                sr.color = new Color(startColor.r, startColor.g, startColor.b, Mathf.Lerp(1f, 0f, t));
+            }
+
+            yield return null;
+        }
+
+        Debug.Log($"<color=green>[ExitGate]</color> Khối RetreatArrowBlock '{block.name}' đã thoát khỏi bàn cờ thành công!");
+        onBlockExit?.Invoke(block);
+
+        if (destroyBlockOnExit)
+        {
+            Destroy(block.gameObject);
+        }
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         ArrowBlock arrowBlock = other.GetComponent<ArrowBlock>();
@@ -268,6 +315,12 @@ public class ExitGate : MonoBehaviour
         if (twoWayBlock != null && !twoWayBlock.IsMoving)
         {
             HandleBlockExit(twoWayBlock);
+        }
+
+        RetreatArrowBlock retreatBlock = other.GetComponent<RetreatArrowBlock>();
+        if (retreatBlock != null && !retreatBlock.IsMoving)
+        {
+            StartCoroutine(PlayExitAnimationRoutine(retreatBlock));
         }
     }
 }
