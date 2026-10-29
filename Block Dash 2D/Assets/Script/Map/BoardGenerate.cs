@@ -28,6 +28,11 @@ public class BoardGenerator : MonoBehaviour
     [ContextMenu("Generate Board")]
     public void GenerateBoard()
     {
+        GenerateBoard(null);
+    }
+
+    public void GenerateBoard(System.Collections.Generic.List<CellData> cells)
+    {
         if (cellPrefab == null)
         {
             Debug.LogError("Chua gan Cell Prefab!");
@@ -41,18 +46,7 @@ public class BoardGenerator : MonoBehaviour
             return;
         }
 
-        // Xoa cac Cell cu
-        for (int i = transform.childCount - 1; i >= 0; i--)
-        {
-            #if UNITY_EDITOR
-            if (!Application.isPlaying)
-                DestroyImmediate(transform.GetChild(i).gameObject);
-            else
-                Destroy(transform.GetChild(i).gameObject);
-            #else
-            Destroy(transform.GetChild(i).gameObject);
-            #endif
-        }
+        ClearOldBoard();
 
         float cellSize = cellSizePixels / pixelsPerUnit;
         float spacing = spacingPixels / pixelsPerUnit;
@@ -69,47 +63,69 @@ public class BoardGenerator : MonoBehaviour
             -boardHeight / 2f + cellSize / 2f
         );
 
-        for (int row = 0; row < rows; row++)
+        if (cells != null && cells.Count > 0)
         {
-            for (int col = 0; col < columns; col++)
+            foreach (var c in cells)
             {
-                Vector2 position = startPosition + offset
-                    + new Vector2(col * step, row * step);
-
-                GameObject cell = Instantiate(
-                    cellPrefab,
-                    position,
-                    Quaternion.identity,
-                    transform
-                );
-
-                cell.name = "Cell_" + row + "_" + col;
-
-                cell.transform.localScale =
-                    Vector3.one * cellSize;
-
-                if (useCheckerboard)
+                SpawnCell(c.x, c.y, offset, step, cellSize);
+            }
+            Debug.Log($"Da tao board tuy bien voi {cells.Count} o.");
+        }
+        else
+        {
+            for (int row = 0; row < rows; row++)
+            {
+                for (int col = 0; col < columns; col++)
                 {
-                    SpriteRenderer sr =
-                        cell.GetComponent<SpriteRenderer>();
-
-                    if (sr != null)
-                    {
-                        sr.color = (row + col) % 2 == 0
-                            ? cellColorA
-                            : cellColorB;
-                    }
+                    SpawnCell(col, row, offset, step, cellSize);
                 }
+            }
+            Debug.Log("Da tao board " + rows + "x" + columns);
+        }
+    }
 
-                #if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    Undo.RegisterCreatedObjectUndo(
-                        cell, "Generate Board");
-                #endif
+    public void ClearOldBoard()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                DestroyImmediate(transform.GetChild(i).gameObject);
+            else
+                Destroy(transform.GetChild(i).gameObject);
+#else
+            Destroy(transform.GetChild(i).gameObject);
+#endif
+        }
+    }
+
+    private void SpawnCell(int col, int row, Vector2 offset, float step, float cellSize)
+    {
+        Vector2 position = startPosition + offset + new Vector2(col * step, row * step);
+
+        GameObject cell = Instantiate(
+            cellPrefab,
+            position,
+            Quaternion.identity,
+            transform
+        );
+
+        cell.name = "Cell_" + row + "_" + col;
+        cell.transform.localScale = Vector3.one * cellSize;
+
+        if (useCheckerboard)
+        {
+            SpriteRenderer sr = cell.GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.color = (row + col) % 2 == 0 ? cellColorA : cellColorB;
             }
         }
 
-        Debug.Log("Da tao board " + rows + "x" + columns);
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+            Undo.RegisterCreatedObjectUndo(cell, "Generate Board");
+#endif
     }
 }
 

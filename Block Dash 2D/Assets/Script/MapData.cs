@@ -25,18 +25,58 @@ public class BlockData
 }
 
 [Serializable]
+public class ExitGateData
+{
+    public int startColumn = 3;
+    public int columnSpan = 2;
+    public int exitRow = 12;
+    public string gateDirection = "Up"; // Lưu hướng cổng (Up, Down, Left, Right)
+    
+    // Tọa độ thế giới để load chính xác 100% như lúc thiết kế
+    public float posX;
+    public float posY;
+
+    // Cấu hình từ ExitGateManager (ExitGateGenerator)
+    public bool autoCenter = false;
+    public int placement = 0; // GatePlacement enum
+    public float extraCellsUp = 0f;
+    public float offsetX = 0f;
+    public float offsetY = 0f;
+}
+
+[System.Serializable]
+public class CellData
+{
+    public int x;
+    public int y;
+}
+
+[System.Serializable]
 public class MapData
 {
     public string mapName = "Level_1";
-    public int rows = 12;
-    public int columns = 12;
+    [Header("Board Settings")]
+    public int rows;
+    public int columns;
     public float cellSizePixels = 36f;
     public float spacingPixels = 0f;
     public float pixelsPerUnit = 100f;
     public float startPosX = 0f;
     public float startPosY = 0f;
 
+    [Header("Board Cells (Danh sách ô sàn)")]
+    public List<CellData> boardCells = new List<CellData>();
+
+    [Header("SideLine Settings")]
+    public int sidelineThickness = 1;
+    public float sidelineSizePixels = 36f;
+
+    [Header("SidelineSurround Settings")]
+    public int surroundThickness = 1;
+    public int surroundMode = 0; // 0: TileByPixelSize, 1: MatchCells, 2: ExactSprite
+
     public List<BlockData> blocks = new List<BlockData>();
+    public List<ExitGateData> exitGates = new List<ExitGateData>();
 }
 
 [Serializable]

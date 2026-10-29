@@ -8,11 +8,11 @@ using UnityEditor;
 
 public class MapSaver : MonoBehaviour
 {
-    [Header("Map File Settings")]
-    [Tooltip("Tên file map cần lưu (Ví dụ: Level_1, Level_2...)")]
-    public string mapName = "Level_1";
+    [Header("Map Level Settings")]
+    [Tooltip("Nhập số Level cần lưu (Ví dụ: 1 -> lưu thành Level_1.txt)")]
+    public int levelNumber = 1;
 
-    [Header("Board Settings (Kích thước Bàn cờ)")]
+    [Header("Board Info (Tự động đồng bộ từ Scene)")]
     public int rows = 12;
     public int columns = 12;
     public float cellSizePixels = 36f;
@@ -20,63 +20,102 @@ public class MapSaver : MonoBehaviour
     public float pixelsPerUnit = 100f;
     public Vector2 startPosition = Vector2.zero;
 
-    [Header("Blocks Container")]
-    [Tooltip("GameObject cha chứa toàn bộ các block được xếp trên bàn cờ. Nếu để trống sẽ quét các object con của chính GameObject này.")]
-    public Transform blocksContainer;
+    [Header("Border & Surround Settings (Tự động đồng bộ)")]
+    public int sidelineThickness = 1;
+    public float sidelineSizePixels = 36f;
+    public int surroundThickness = 1;
+    public int surroundMode = 0;
 
-    [Header("Palette để test Load ngay tại Scene này (Tùy chọn)")]
-    public List<BlockPaletteEntry> blockPalette = new List<BlockPaletteEntry>();
-
-    private void Awake()
-    {
-        if (blocksContainer == null)
-        {
-            blocksContainer = transform;
-        }
-    }
-
-    [ContextMenu("1. Snap All Blocks to Grid (Hút vào đúng ô)")]
-    public void SnapAllBlocksToGrid()
-    {
-        Transform container = (blocksContainer != null) ? blocksContainer : transform;
-        int count = 0;
-
-        for (int i = 0; i < container.childCount; i++)
-        {
-            Transform blockTr = container.GetChild(i);
-            Vector2Int gridCoord = WorldToGrid(blockTr.position);
-            Vector2 snapPos = GridToWorld(gridCoord.x, gridCoord.y);
-
-            blockTr.position = new Vector3(snapPos.x, snapPos.y, blockTr.position.z);
-
-            BlockItem item = blockTr.GetComponent<BlockItem>();
-            if (item != null)
-            {
-                item.gridX = gridCoord.x;
-                item.gridY = gridCoord.y;
-            }
-
-            count++;
-        }
-
-        Debug.Log($"Đã Snap {count} blocks vào đúng tâm các ô trên bàn cờ {rows}x{columns}!");
-    }
-
-    [ContextMenu("2. Save Map to JSON (Lưu map)")]
+    [ContextMenu("2. Save Map to TXT (Tự động quét toàn bộ Scene)")]
     public void SaveMap()
     {
-        if (string.IsNullOrEmpty(mapName))
+        string finalMapName = "Level_" + levelNumber;
+
+        // 1. Tự động lấy thông số Board từ BoardGenerator, Board hoặc SideLine
+#if UNITY_2023_1_OR_NEWER
+        BoardGenerator boardGen = FindFirstObjectByType<BoardGenerator>();
+        Board board = FindFirstObjectByType<Board>();
+        SideLine sideline = FindFirstObjectByType<SideLine>();
+        SidelineSurround surround = FindFirstObjectByType<SidelineSurround>();
+#else
+        BoardGenerator boardGen = FindObjectOfType<BoardGenerator>();
+        Board board = FindObjectOfType<Board>();
+        SideLine sideline = FindObjectOfType<SideLine>();
+        SidelineSurround surround = FindObjectOfType<SidelineSurround>();
+#endif
+
+        if (boardGen != null)
         {
-            Debug.LogError("Chưa nhập Tên Map (mapName)!");
-            return;
+            rows = boardGen.rows;
+            columns = boardGen.columns;
+            cellSizePixels = boardGen.cellSizePixels;
+            spacingPixels = boardGen.spacingPixels;
+            pixelsPerUnit = boardGen.pixelsPerUnit;
+            startPosition = boardGen.startPosition;
+        }
+        else if (board != null)
+        {
+            rows = board.rows;
+            columns = board.columns;
+            cellSizePixels = board.cellSizePixels;
+            spacingPixels = board.spacingPixels;
+            pixelsPerUnit = board.pixelsPerUnit;
+            startPosition = board.startPosition;
+        }
+        else if (sideline != null)
+        {
+            rows = sideline.rows;
+            columns = sideline.columns;
+            cellSizePixels = sideline.cellSizePixels;
+            spacingPixels = sideline.spacingPixels;
+            pixelsPerUnit = sideline.pixelsPerUnit;
+            startPosition = sideline.startPosition;
         }
 
-        Transform container = (blocksContainer != null) ? blocksContainer : transform;
+        if (sideline != null)
+        {
+            sidelineThickness = sideline.borderThickness;
+            sidelineSizePixels = sideline.borderSizePixels;
+        }
 
-        // Tạo dữ liệu MapData
+        if (surround != null)
+        {
+            surroundThickness = surround.surroundThickness;
+            surroundMode = (int)surround.surroundMode;
+        }
+
+        // 2. Quét danh sách các ô Cell của bàn cờ
+        List<CellData> cells = new List<CellData>();
+        Transform cellContainer = (boardGen != null) ? boardGen.transform : ((board != null) ? board.transform : null);
+        if (cellContainer != null && cellContainer.childCount > 0)
+        {
+            for (int i = 0; i < cellContainer.childCount; i++)
+            {
+                Transform child = cellContainer.GetChild(i);
+                if (child.name.StartsWith("Cell_"))
+                {
+                    Vector2Int coord = WorldToGrid(child.position);
+                    cells.Add(new CellData { x = coord.x, y = coord.y });
+                }
+            }
+        }
+
+        // Nếu trên Scene chưa sinh các ô Cell con, mặc định lưu đầy đủ hình chữ nhật rows x columns
+        if (cells.Count == 0)
+        {
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < columns; c++)
+                {
+                    cells.Add(new CellData { x = c, y = r });
+                }
+            }
+        }
+
+        // Tạo khung dữ liệu MapData
         MapData mapData = new MapData
         {
-            mapName = mapName.Trim(),
+            mapName = finalMapName,
             rows = rows,
             columns = columns,
             cellSizePixels = cellSizePixels,
@@ -84,28 +123,96 @@ public class MapSaver : MonoBehaviour
             pixelsPerUnit = pixelsPerUnit,
             startPosX = startPosition.x,
             startPosY = startPosition.y,
+            boardCells = cells,
+            sidelineThickness = sidelineThickness,
+            sidelineSizePixels = sidelineSizePixels,
+            surroundThickness = surroundThickness,
+            surroundMode = surroundMode,
+            exitGates = new List<ExitGateData>(),
             blocks = new List<BlockData>()
         };
 
-        // Quét tất cả các block nằm trong container
-        for (int i = 0; i < container.childCount; i++)
+        // 2. Tự động quét ExitGateManager (ExitGateGenerator) hoặc ExitGate trong Scene
+#if UNITY_2023_1_OR_NEWER
+        ExitGateGenerator gateGen = FindFirstObjectByType<ExitGateGenerator>();
+        ExitGate[] allGates = FindObjectsByType<ExitGate>(FindObjectsSortMode.None);
+#else
+        ExitGateGenerator gateGen = FindObjectOfType<ExitGateGenerator>();
+        ExitGate[] allGates = FindObjectsOfType<ExitGate>();
+#endif
+        if (gateGen != null)
         {
-            Transform blockTr = container.GetChild(i);
+            float gatePosX = gateGen.transform.position.x;
+            float gatePosY = gateGen.transform.position.y;
+            string direction = "Up";
+            int exitRow = rows;
 
-            // Bỏ qua các object ẩn nếu có
-            if (!blockTr.gameObject.activeSelf) continue;
-
-            string typeName = "";
-            BlockItem item = blockTr.GetComponent<BlockItem>();
-            if (item != null)
+            if (gateGen.CurrentGateObject != null)
             {
-                typeName = item.GetBlockType();
+                gatePosX = gateGen.CurrentGateObject.transform.position.x;
+                gatePosY = gateGen.CurrentGateObject.transform.position.y;
+                ExitGate gateComp = gateGen.CurrentGateObject.GetComponent<ExitGate>();
+                if (gateComp != null)
+                {
+                    direction = gateComp.gateDirection.ToString();
+                    exitRow = gateComp.exitRow;
+                }
             }
-            else
+            else if (allGates != null && allGates.Length > 0 && allGates[0] != null)
             {
-                typeName = blockTr.gameObject.name.Replace("(Clone)", "").Trim();
+                gatePosX = allGates[0].transform.position.x;
+                gatePosY = allGates[0].transform.position.y;
+                direction = allGates[0].gateDirection.ToString();
+                exitRow = allGates[0].exitRow;
             }
 
+            ExitGateData gData = new ExitGateData
+            {
+                startColumn = gateGen.startColumn,
+                columnSpan = gateGen.gateWidthInCells,
+                exitRow = exitRow,
+                gateDirection = direction,
+                posX = gatePosX,
+                posY = gatePosY,
+                autoCenter = gateGen.autoCenter,
+                placement = (int)gateGen.placement,
+                extraCellsUp = gateGen.extraCellsUp,
+                offsetX = gateGen.positionOffset.x,
+                offsetY = gateGen.positionOffset.y
+            };
+            mapData.exitGates.Add(gData);
+        }
+        else
+        {
+            foreach (var gate in allGates)
+            {
+                if (gate == null) continue;
+                ExitGateData gData = new ExitGateData
+                {
+                    startColumn = gate.startColumn,
+                    columnSpan = gate.columnSpan,
+                    exitRow = gate.exitRow,
+                    gateDirection = gate.gateDirection.ToString(),
+                    posX = gate.transform.position.x,
+                    posY = gate.transform.position.y
+                };
+                mapData.exitGates.Add(gData);
+            }
+        }
+
+        // 3. Tự động quét toàn bộ các Block đang có trên Scene
+#if UNITY_2023_1_OR_NEWER
+        BlockItem[] allBlocksInScene = FindObjectsByType<BlockItem>(FindObjectsSortMode.None);
+#else
+        BlockItem[] allBlocksInScene = FindObjectsOfType<BlockItem>();
+#endif
+
+        foreach (var item in allBlocksInScene)
+        {
+            if (item == null || !item.gameObject.activeSelf) continue;
+
+            Transform blockTr = item.transform;
+            string typeName = blockTr.gameObject.name.Replace("(Clone)", "").Trim();
             Vector2Int gridCoord = WorldToGrid(blockTr.position);
 
             BlockData bData = new BlockData
@@ -121,102 +228,25 @@ public class MapSaver : MonoBehaviour
             mapData.blocks.Add(bData);
         }
 
-        // Chuyển sang chuỗi JSON đẹp mắt
+        // 4. Lưu ra file .txt vào thư mục Resources/Maps
         string json = JsonUtility.ToJson(mapData, true);
 
-        // Lưu vào thư mục Assets/Resources/Maps để scene khác có thể load được mọi lúc
         string folderPath = Path.Combine(Application.dataPath, "Resources", "Maps");
         if (!Directory.Exists(folderPath))
         {
             Directory.CreateDirectory(folderPath);
         }
 
-        string filePath = Path.Combine(folderPath, mapData.mapName + ".json");
+        string filePath = Path.Combine(folderPath, finalMapName + ".txt");
         File.WriteAllText(filePath, json);
 
 #if UNITY_EDITOR
         AssetDatabase.Refresh();
 #endif
 
-        Debug.Log($"<color=green>LƯU THÀNH CÔNG!</color> Đã lưu {mapData.blocks.Count} blocks vào file: {filePath}");
+        Debug.Log($"<color=green>LƯU MAP THÀNH CÔNG!</color> Level {levelNumber} đã lưu: {mapData.blocks.Count} blocks, {mapData.exitGates.Count} cổng thoát vào file: {filePath}");
     }
 
-    [ContextMenu("3. Load Map from JSON (Editor Test)")]
-    public void LoadMapInEditor()
-    {
-        string filePath = Path.Combine(Application.dataPath, "Resources", "Maps", mapName + ".json");
-        if (!File.Exists(filePath))
-        {
-            Debug.LogError($"Không tìm thấy file: {filePath}");
-            return;
-        }
-
-        string json = File.ReadAllText(filePath);
-        MapData mapData = JsonUtility.FromJson<MapData>(json);
-        if (mapData == null)
-        {
-            Debug.LogError("Dữ liệu JSON bị lỗi!");
-            return;
-        }
-
-        ClearAllBlocks();
-
-        Transform container = (blocksContainer != null) ? blocksContainer : transform;
-
-        // Tạo map tra cứu palette
-        Dictionary<string, GameObject> paletteDict = new Dictionary<string, GameObject>();
-        foreach (var entry in blockPalette)
-        {
-            if (!string.IsNullOrEmpty(entry.blockType) && entry.prefab != null)
-            {
-                paletteDict[entry.blockType] = entry.prefab;
-            }
-        }
-
-        foreach (var b in mapData.blocks)
-        {
-            Vector2 spawnPos = GridToWorld(b.gridX, b.gridY);
-            Quaternion rot = Quaternion.Euler(0, 0, b.rotationZ);
-
-            if (paletteDict.TryGetValue(b.blockType, out GameObject prefab))
-            {
-                GameObject obj = Instantiate(prefab, spawnPos, rot, container);
-                obj.name = b.blockType;
-                BlockItem item = obj.GetComponent<BlockItem>();
-                if (item != null)
-                {
-                    item.blockType = b.blockType;
-                    item.gridX = b.gridX;
-                    item.gridY = b.gridY;
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"Chưa gán Prefab cho loại block: '{b.blockType}' trong Block Palette!");
-            }
-        }
-
-        Debug.Log($"Đã Load xong {mapData.blocks.Count} blocks từ file {mapName}.json!");
-    }
-
-    [ContextMenu("Clear All Blocks")]
-    public void ClearAllBlocks()
-    {
-        Transform container = (blocksContainer != null) ? blocksContainer : transform;
-        for (int i = container.childCount - 1; i >= 0; i--)
-        {
-#if UNITY_EDITOR
-            if (!Application.isPlaying)
-            {
-                DestroyImmediate(container.GetChild(i).gameObject);
-                continue;
-            }
-#endif
-            Destroy(container.GetChild(i).gameObject);
-        }
-    }
-
-    // Các hàm tính toán tọa độ lưới
     public Vector2 GridToWorld(int col, int row)
     {
         float cellSize = cellSizePixels / pixelsPerUnit;
@@ -256,3 +286,29 @@ public class MapSaver : MonoBehaviour
         return new Vector2Int(col, row);
     }
 }
+
+#if UNITY_EDITOR
+[CustomEditor(typeof(MapSaver))]
+public class MapSaverEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        MapSaver saver = (MapSaver)target;
+
+        EditorGUILayout.Space(5);
+        EditorGUILayout.HelpBox("Nhập số Level và nhấn nút Save để tự động quét Board, ExitGate và toàn bộ Block trong Scene ra file .txt.", MessageType.Info);
+
+        DrawDefaultInspector();
+
+        EditorGUILayout.Space(10);
+
+        GUI.backgroundColor = new Color(0.2f, 0.8f, 0.4f);
+        if (GUILayout.Button($"💾 LƯU LEVEL {saver.levelNumber} (SAVE MAP)", GUILayout.Height(42)))
+        {
+            saver.SaveMap();
+        }
+
+        GUI.backgroundColor = Color.white;
+    }
+}
+#endif

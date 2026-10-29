@@ -46,10 +46,12 @@ public class BlockSpawner : MonoBehaviour
             return;
         }
 
+        // Truyền thêm 'transform' vào đây để nhận BlockSpawner làm đối tượng cha
         GameObject newBlock = Instantiate(
             prefab,
             new Vector3(spawnPosition.x, spawnPosition.y, 0f),
-            Quaternion.identity
+            Quaternion.identity,
+            transform
         );
 
         newBlock.name = blockList[selectedBlockIndex].blockName;

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1355035745353431138}
   - component: {fileID: 4959558885547517268}
   - component: {fileID: 7886710988793655423}
+  - component: {fileID: 837074351844723357}
   m_Layer: 0
   m_Name: Block4x4
   m_TagString: Untagged
@@ -189,3 +190,18 @@ MonoBehaviour:
       m_Calls: []
   lastDirection: 1
   lastRotationZ: 90
+--- !u!114 &837074351844723357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7381358188628088632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03b7d396f75a4a140830bc3f663c3dc9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlockSnapToGrid
+  boardTransform: {fileID: 0}
+  cellSize: 1
+  positionOffset: {x: 0, y: 0}
