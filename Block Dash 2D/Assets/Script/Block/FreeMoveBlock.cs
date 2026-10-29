@@ -1,4 +1,3 @@
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -176,7 +175,7 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
     }
 
     // =========================================================
-    // BOARD SETTINGS - CÙNG CÁCH LẤY THÔNG SỐ VỚI ARROWBLOCK
+    // BOARD SETTINGS
     // =========================================================
 
     public void DetectBoardSettings()
@@ -263,7 +262,6 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
 
     // =========================================================
     // GRID
-    // Quy ước: boardCenter là tâm toàn bộ bàn cờ.
     // =========================================================
 
     private Vector2 GetFirstCellCenter()
@@ -318,31 +316,27 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
     }
 
     // =========================================================
-    // OBSTACLE CHECK
+    // OBSTACLE CHECK (Đã fix chuẩn chống đi xuyên)
     // =========================================================
 
     private bool IsBlocked(Vector2Int cell)
     {
+        if (!IsInsideBoard(cell)) return true;
+
         Vector2 worldPosition = GridToWorld(cell);
+        Vector2 boxSize = Vector2.one * StepSize * 0.75f;
 
         Collider2D[] hits = Physics2D.OverlapBoxAll(
             worldPosition,
-            Vector2.one * StepSize * 0.75f,
+            boxSize,
             0f,
             obstacleLayers
         );
 
         foreach (Collider2D hit in hits)
         {
-            if (hit == null)
-            {
-                continue;
-            }
-
-            if (ignoreTriggers && hit.isTrigger)
-            {
-                continue;
-            }
+            if (hit == null) continue;
+            if (ignoreTriggers && hit.isTrigger) continue;
 
             if (hit == myCollider ||
                 hit.transform == transform ||
@@ -358,16 +352,15 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
     }
 
     // =========================================================
-    // PATHFINDING: TÌM ĐƯỜNG TỪ BLOCK ĐẾN BIÊN BÀN CỜ
+    // PATHFINDING: TÌM ĐƯỜNG TỚI BIÊN
     // =========================================================
 
     private List<Vector2Int> FindPathToEdge(Vector2Int start)
     {
+        if (IsBlocked(start)) return null;
+
         Queue<Vector2Int> queue = new Queue<Vector2Int>();
-
-        Dictionary<Vector2Int, Vector2Int> previous =
-            new Dictionary<Vector2Int, Vector2Int>();
-
+        Dictionary<Vector2Int, Vector2Int> previous = new Dictionary<Vector2Int, Vector2Int>();
         HashSet<Vector2Int> visited = new HashSet<Vector2Int>();
 
         queue.Enqueue(start);
@@ -391,8 +384,7 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
             {
                 Vector2Int next = current + direction;
 
-                if (!IsInsideBoard(next) ||
-                    visited.Contains(next))
+                if (!IsInsideBoard(next) || visited.Contains(next))
                 {
                     continue;
                 }
@@ -421,19 +413,12 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
 
         while (step != start)
         {
-            if (!previous.ContainsKey(step))
-            {
-                return null;
-            }
-
+            if (!previous.ContainsKey(step)) return null;
             step = previous[step];
             path.Add(step);
         }
 
         path.Reverse();
-
-        Log($"Tìm được đường tới biên, số ô: {path.Count}");
-
         return path;
     }
 
@@ -443,59 +428,58 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
 
     public void MoveToExit()
     {
-        if (isMoving || hasExited)
-        {
-            return;
-        }
+        if (isMoving || hasExited) return;
 
-        if (autoDetectBoard)
-        {
-            DetectBoardSettings();
-        }
+        if (autoDetectBoard) DetectBoardSettings();
 
-        if (boardRows <= 0 || boardColumns <= 0 || StepSize <= 0f)
-        {
-            Log("Lỗi: Thông số board không hợp lệ.");
-            return;
-        }
-
-        if (myCollider == null)
-        {
-            Log("Lỗi: Block thiếu Collider2D.");
-            return;
-        }
+        if (boardRows <= 0 || boardColumns <= 0 || StepSize <= 0f || myCollider == null) return;
 
         ExitGate exitGate = FindFirstObjectByType<ExitGate>();
-
-        if (exitGate == null)
-        {
-            Log("Không tìm thấy ExitGate trong Scene.");
-            return;
-        }
+        if (exitGate == null) return;
 
         Vector2Int startCell = WorldToGrid(transform.position);
-
-        if (!IsInsideBoard(startCell))
-        {
-            Log(
-                $"Vị trí block không nằm trong board: {startCell}. " +
-                "Kiểm tra boardCenter và cách đặt block."
-            );
-            return;
-        }
+        if (!IsInsideBoard(startCell)) return;
 
         List<Vector2Int> path = FindPathToEdge(startCell);
 
         if (path == null || path.Count == 0)
         {
+            // Bị kẹt hoàn toàn -> Rung nhẹ báo hiệu giống ArrowBlock
+            StartCoroutine(ShakeRoutine(Vector2.up, StepSize * 0.15f));
             return;
         }
 
         StartCoroutine(MoveRoutine(path, exitGate));
     }
 
+    private IEnumerator ShakeRoutine(Vector2 dir, float shakeDistance)
+    {
+        Vector3 basePos = transform.position;
+        Vector3 bumpPos = basePos + (Vector3)(dir * shakeDistance);
+
+        float duration = 0.05f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            transform.position = Vector3.Lerp(basePos, bumpPos, elapsed / duration);
+            yield return null;
+        }
+
+        elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            transform.position = Vector3.Lerp(bumpPos, basePos, elapsed / duration);
+            yield return null;
+        }
+
+        transform.position = basePos;
+    }
+
     // =========================================================
-    // MOVE TO EDGE, THEN FOLLOW SIDELINE TO GATE
+    // MOVE ROUTINE
     // =========================================================
 
     private IEnumerator MoveRoutine(
@@ -504,7 +488,6 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
     {
         isMoving = true;
 
-        // 1. Đi theo đường trống đến ô biên.
         foreach (Vector2Int cell in path)
         {
             Vector2 target = GridToWorld(cell);
@@ -521,8 +504,7 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
 
         float halfWidth = boardColumns * StepSize / 2f;
         float halfHeight = boardRows * StepSize / 2f;
-        float laneDistance = Mathf.Max(1, borderThickness) *
-                             StepSize / 2f;
+        float laneDistance = Mathf.Max(1, borderThickness) * StepSize / 2f;
 
         float laneRight = boardCenter.x + halfWidth + laneDistance;
         float laneLeft = boardCenter.x - halfWidth - laneDistance;
@@ -531,21 +513,17 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
 
         Vector2 edgeWorld = GridToWorld(edgeCell);
 
-        // Tắt collider khi block đã bắt đầu ra ngoài bàn cờ,
-        // tránh collider của chính block cản chuyển động.
         if (myCollider != null)
         {
             myCollider.enabled = false;
         }
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
-
         if (sr != null && sr.sortingOrder < 5)
         {
             sr.sortingOrder = 5;
         }
 
-        // 2. Đi từ ô biên ra làn Sideline tương ứng.
         Vector2 laneStart;
 
         if (edgeCell.x == 0)
@@ -571,58 +549,42 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
 
         Vector3 gatePosition = exitGate.transform.position;
 
-        // 3. Chạy dọc viền, ưu tiên vòng lên cạnh trên như ArrowBlock.
         if (edgeCell.x == 0)
         {
             yield return StartCoroutine(
-                SmoothMoveTo(new Vector2(laneLeft, laneTop),
-                    sidelineMoveSpeed)
+                SmoothMoveTo(new Vector2(laneLeft, laneTop), sidelineMoveSpeed)
             );
         }
         else if (edgeCell.x == boardColumns - 1)
         {
             yield return StartCoroutine(
-                SmoothMoveTo(new Vector2(laneRight, laneTop),
-                    sidelineMoveSpeed)
+                SmoothMoveTo(new Vector2(laneRight, laneTop), sidelineMoveSpeed)
             );
         }
         else if (edgeCell.y == 0)
         {
-            // Từ cạnh dưới, chọn bên trái hoặc bên phải gần hơn.
-            bool useLeft = Mathf.Abs(laneStart.x - laneLeft) <
-                           Mathf.Abs(laneStart.x - laneRight);
-
+            bool useLeft = Mathf.Abs(laneStart.x - laneLeft) < Mathf.Abs(laneStart.x - laneRight);
             float sideX = useLeft ? laneLeft : laneRight;
 
             yield return StartCoroutine(
-                SmoothMoveTo(new Vector2(sideX, laneBottom),
-                    sidelineMoveSpeed)
+                SmoothMoveTo(new Vector2(sideX, laneBottom), sidelineMoveSpeed)
             );
 
             yield return StartCoroutine(
-                SmoothMoveTo(new Vector2(sideX, laneTop),
-                    sidelineMoveSpeed)
+                SmoothMoveTo(new Vector2(sideX, laneTop), sidelineMoveSpeed)
             );
         }
 
-        // 4. Di chuyển trên cạnh trên tới vị trí cổng.
         yield return StartCoroutine(
-            SmoothMoveTo(new Vector2(gatePosition.x, laneTop),
-                sidelineMoveSpeed)
+            SmoothMoveTo(new Vector2(gatePosition.x, laneTop), sidelineMoveSpeed)
         );
 
-        // 5. Đi tới cổng.
         yield return StartCoroutine(
             SmoothMoveTo(gatePosition, sidelineMoveSpeed)
         );
 
-        // ArrowBlock gọi PlayExitAnimationRoutine(this).
-        // Hàm đó nhận ArrowBlock, không nhận FreeMoveBlock.
-        // Vì vậy ở đây block sẽ kết thúc bằng cách ẩn GameObject.
         hasExited = true;
         isMoving = false;
-
-        Log("Block đã đi tới ExitGate.");
 
         gameObject.SetActive(false);
     }
@@ -651,13 +613,9 @@ public class FreeMoveBlock : BlockItem, IPointerDownHandler
 
     private void OnDrawGizmosSelected()
     {
-        if (StepSize <= 0f)
-        {
-            return;
-        }
+        if (StepSize <= 0f) return;
 
         Gizmos.color = Color.cyan;
-
         Gizmos.DrawWireCube(
             transform.position,
             Vector3.one * StepSize * 0.8f

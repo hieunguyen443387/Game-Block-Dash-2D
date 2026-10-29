@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: -2523491004608671128}
   - component: {fileID: 1826424755947000723}
   - component: {fileID: 5795034898393322960}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Free Move Block
   m_TagString: Untagged
   m_Icon: {fileID: 0}

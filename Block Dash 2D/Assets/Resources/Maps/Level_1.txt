@@ -399,11 +399,11 @@
     "surroundMode": 0,
     "blocks": [
         {
-            "blockType": "Two Way Block",
-            "gridX": 2,
-            "gridY": 7,
-            "posX": -1.0775623321533204,
-            "posY": 1.4736841917037964,
+            "blockType": "Free Move Block",
+            "gridX": 3,
+            "gridY": 6,
+            "posX": -0.5512465238571167,
+            "posY": 0.4487534761428833,
             "rotationZ": 0.0
         },
         {
@@ -415,12 +415,20 @@
             "rotationZ": 0.0
         },
         {
-            "blockType": "Free Move Block",
-            "gridX": 3,
-            "gridY": 6,
-            "posX": -0.5512465238571167,
-            "posY": 0.4487534761428833,
+            "blockType": "Two Way Block",
+            "gridX": 2,
+            "gridY": 7,
+            "posX": -1.0775623321533204,
+            "posY": 1.4736841917037964,
             "rotationZ": 0.0
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 5,
+            "posX": -1.5512464046478272,
+            "posY": -0.1024928092956543,
+            "rotationZ": 270.0
         },
         {
             "blockType": "Block 4x4",
