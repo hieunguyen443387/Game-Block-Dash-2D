@@ -72,6 +72,29 @@ public class BlockSpawner : MonoBehaviour
         Debug.Log("Da tao Block: " + newBlock.name);
     }
 
+    /// <summary>
+    /// Xóa toàn bộ các block đang quản lý và các object con trực tiếp
+    /// </summary>
+    [ContextMenu("Clear All Blocks")]
+    public void ClearAllBlocks()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = transform.GetChild(i);
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                Undo.DestroyObjectImmediate(child.gameObject);
+                continue;
+            }
+#endif
+            Destroy(child.gameObject);
+        }
+
+        activeBlocks.Clear();
+        Debug.Log("<color=orange>Đã xóa toàn bộ block trên màn hình!</color>");
+    }
+
     // Hàm hỗ trợ xóa block khỏi danh sách quản lý khi nó bị hủy
     public void RemoveBlockFromList(BlockItem blockItem)
     {
@@ -92,12 +115,23 @@ public class BlockSpawnerEditor : Editor
 
         BlockSpawner spawner = (BlockSpawner)target;
 
-        EditorGUILayout.Space();
+        EditorGUILayout.Space(10);
 
-        if (GUILayout.Button("Create Block"))
+        GUI.backgroundColor = new Color(0.2f, 0.8f, 0.4f);
+        if (GUILayout.Button("Create Block", GUILayout.Height(35)))
         {
             spawner.CreateBlock();
         }
+
+        GUI.backgroundColor = new Color(1f, 0.4f, 0.4f);
+        if (GUILayout.Button("🗑️ Clear All Blocks", GUILayout.Height(35)))
+        {
+            Undo.RegisterFullObjectHierarchyUndo(spawner.gameObject, "Clear All Blocks");
+            spawner.ClearAllBlocks();
+            EditorUtility.SetDirty(spawner);
+        }
+
+        GUI.backgroundColor = Color.white;
     }
 }
 #endif
