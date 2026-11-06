@@ -50,8 +50,11 @@ TagManager:
   - name: Block
     uniqueID: 933521361
     locked: 0
+  - name: Ice Block
+    uniqueID: 1457199289
+    locked: 0
   - name: Gate
-    uniqueID: 3095693793
+    uniqueID: 243788185
     locked: 0
   m_RenderingLayers:
   - Default

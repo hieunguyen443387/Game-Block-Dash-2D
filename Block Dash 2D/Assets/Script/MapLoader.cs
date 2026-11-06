@@ -55,16 +55,80 @@ public class MapLoader : MonoBehaviour
         BuildPaletteDictionary();
     }
 
+    private string NormalizeKey(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        return text.Replace(" ", "").Replace("_", "").ToLowerInvariant().Trim();
+    }
+
     private void BuildPaletteDictionary()
     {
-        paletteDictionary = new Dictionary<string, GameObject>();
+        paletteDictionary = new Dictionary<string, GameObject>(System.StringComparer.OrdinalIgnoreCase);
         foreach (var entry in blockPalette)
         {
-            if (!string.IsNullOrEmpty(entry.blockType) && entry.prefab != null)
+            if (entry == null || entry.prefab == null) continue;
+
+            if (!string.IsNullOrEmpty(entry.blockType))
             {
-                paletteDictionary[entry.blockType.Trim()] = entry.prefab;
+                string key = entry.blockType.Trim();
+                paletteDictionary[key] = entry.prefab;
+                paletteDictionary[key.Replace(" ", "")] = entry.prefab;
+                paletteDictionary[NormalizeKey(key)] = entry.prefab;
+            }
+
+            // Đăng ký cả tên Prefab để dù blockType lưu theo tên Prefab hay tên Palette đều tìm thấy
+            string pName = entry.prefab.name.Trim();
+            paletteDictionary[pName] = entry.prefab;
+            paletteDictionary[pName.Replace(" ", "")] = entry.prefab;
+            paletteDictionary[NormalizeKey(pName)] = entry.prefab;
+        }
+    }
+
+    public GameObject GetPrefabFromPalette(string blockType)
+    {
+        if (string.IsNullOrEmpty(blockType)) return null;
+
+        // 1. Thử tra cứu trong Dictionary đã build
+        if (paletteDictionary != null)
+        {
+            if (paletteDictionary.TryGetValue(blockType, out GameObject direct)) return direct;
+            if (paletteDictionary.TryGetValue(blockType.Trim(), out GameObject trimmed)) return trimmed;
+            if (paletteDictionary.TryGetValue(blockType.Replace(" ", ""), out GameObject noSpace)) return noSpace;
+            if (paletteDictionary.TryGetValue(NormalizeKey(blockType), out GameObject normMatch)) return normMatch;
+        }
+
+        // 2. Quét trực tiếp danh sách blockPalette (Fuzzy matching)
+        string normTarget = NormalizeKey(blockType);
+        foreach (var entry in blockPalette)
+        {
+            if (entry == null || entry.prefab == null) continue;
+
+            if (NormalizeKey(entry.blockType) == normTarget || NormalizeKey(entry.prefab.name) == normTarget)
+            {
+                return entry.prefab;
             }
         }
+
+#if UNITY_EDITOR
+        // 3. Dự phòng cho Editor: Tự động tìm trong project nếu người dùng chưa kịp gán vào Block Palette
+        string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefab" });
+        foreach (var g in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(g);
+            string assetName = Path.GetFileNameWithoutExtension(path);
+            if (NormalizeKey(assetName) == normTarget)
+            {
+                GameObject found = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (found != null)
+                {
+                    Debug.Log($"[MapLoader] Tự động tìm thấy Prefab '{assetName}' khớp với '{blockType}'!");
+                    return found;
+                }
+            }
+        }
+#endif
+
+        return null;
     }
 
     [ContextMenu("Load Level By Number")]
@@ -107,7 +171,8 @@ public class MapLoader : MonoBehaviour
         int spawnedCount = 0;
         foreach (var b in mapData.blocks)
         {
-            if (paletteDictionary.TryGetValue(b.blockType, out GameObject prefab))
+            GameObject prefab = GetPrefabFromPalette(b.blockType);
+            if (prefab != null)
             {
                 Vector2 spawnPos = new Vector2(b.posX, b.posY);
                 Quaternion rotation = Quaternion.Euler(0, 0, b.rotationZ);
@@ -121,6 +186,19 @@ public class MapLoader : MonoBehaviour
                     item.blockType = b.blockType;
                     item.gridX = b.gridX;
                     item.gridY = b.gridY;
+                }
+
+                // Cập nhật trạng thái đóng băng từ dữ liệu đã lưu
+                FreezableBlock freezable = blockObj.GetComponent<FreezableBlock>();
+                if (freezable != null)
+                {
+                    freezable.SetFrozen(b.isFrozen);
+                }
+                else if (b.isFrozen)
+                {
+                    // Nếu prefab chưa có component FreezableBlock nhưng dữ liệu map lưu là đóng băng
+                    FreezableBlock addedFreezable = blockObj.AddComponent<FreezableBlock>();
+                    addedFreezable.SetFrozen(true);
                 }
 
                 spawnedCount++;

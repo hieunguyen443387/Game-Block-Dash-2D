@@ -212,8 +212,24 @@ public class MapSaver : MonoBehaviour
             if (item == null || !item.gameObject.activeSelf) continue;
 
             Transform blockTr = item.transform;
-            string typeName = blockTr.gameObject.name.Replace("(Clone)", "").Trim();
+            string typeName = item.GetBlockType();
+            if (string.IsNullOrEmpty(typeName))
+            {
+                typeName = blockTr.gameObject.name.Replace("(Clone)", "").Trim();
+            }
             Vector2Int gridCoord = WorldToGrid(blockTr.position);
+
+            // Kiểm tra trạng thái đóng băng từ FreezableBlock hoặc ArrowBlock
+            bool isBlockFrozen = false;
+            FreezableBlock freezable = item.GetComponent<FreezableBlock>();
+            if (freezable != null)
+            {
+                isBlockFrozen = freezable.isFrozen;
+            }
+            else if (item is ArrowBlock arrow && arrow.IsFrozen)
+            {
+                isBlockFrozen = true;
+            }
 
             BlockData bData = new BlockData
             {
@@ -222,7 +238,8 @@ public class MapSaver : MonoBehaviour
                 gridY = gridCoord.y,
                 posX = blockTr.position.x,
                 posY = blockTr.position.y,
-                rotationZ = blockTr.eulerAngles.z
+                rotationZ = blockTr.eulerAngles.z,
+                isFrozen = isBlockFrozen
             };
 
             mapData.blocks.Add(bData);

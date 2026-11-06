@@ -107,6 +107,25 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
     public UnityEvent onMoveFinished;
     public UnityEvent onBlocked;
 
+    [Header("7. Đóng băng (Freeze)")]
+    [Tooltip("Tham chiếu tới FreezableBlock (nếu để trống sẽ tự động tìm trên cùng GameObject)")]
+    public FreezableBlock freezableBlock;
+
+    /// <summary>
+    /// Kiểm tra xem Block có đang bị đóng băng bởi FreezableBlock hay không
+    /// </summary>
+    public bool IsFrozen
+    {
+        get
+        {
+            if (freezableBlock == null)
+            {
+                freezableBlock = GetComponent<FreezableBlock>();
+            }
+            return freezableBlock != null && freezableBlock.isFrozen;
+        }
+    }
+
     // Trạng thái runtime
     private bool isMoving = false;
     private Collider2D myCollider;
@@ -120,6 +139,11 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
     private void Awake()
     {
         myCollider = GetComponent<Collider2D>();
+
+        if (freezableBlock == null)
+        {
+            freezableBlock = GetComponent<FreezableBlock>();
+        }
 
         // Mặc định định danh loại block nếu chưa đặt
         if (string.IsNullOrEmpty(blockType))
@@ -417,6 +441,19 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
     public void TriggerMove()
     {
         if (isMoving) return;
+
+        // Nếu block đang bị đóng băng (isFrozen = true) thì khóa di chuyển
+        if (IsFrozen)
+        {
+            Debug.Log($"[ArrowBlock] Khối '{name}' đang bị đóng băng (FreezableBlock.isFrozen = true). Không thể di chuyển!", this);
+            onBlocked?.Invoke();
+            if (playBlockedShake)
+            {
+                StartCoroutine(ShakeRoutine(GetDirectionVector(), GetStepSize() * 0.15f));
+            }
+            return;
+        }
+
         StartCoroutine(MoveRoutine());
     }
 
@@ -883,6 +920,11 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
             blockType = "ArrowBlock";
         }
 
+        if (freezableBlock == null)
+        {
+            freezableBlock = GetComponent<FreezableBlock>();
+        }
+
         if (!autoSyncRotation) return;
 
         float currentZ = transform.eulerAngles.z;
@@ -1010,12 +1052,20 @@ public class ArrowBlockEditor : Editor
         // Hiển thị nút test di chuyển khi đang Play Mode
         if (Application.isPlaying)
         {
-            GUI.backgroundColor = new Color(0.2f, 1f, 0.4f);
-            if (GUILayout.Button("▶ TEST CLICK (THỬ DI CHUYỂN)", GUILayout.Height(32)))
+            bool isFrozen = block.IsFrozen;
+            if (isFrozen)
+            {
+                EditorGUILayout.HelpBox("🧊 Khối này đang BỊ ĐÓNG BĂNG (FreezableBlock.isFrozen = true). Chức năng di chuyển đã bị khóa!", MessageType.Warning);
+            }
+
+            EditorGUI.BeginDisabledGroup(isFrozen);
+            GUI.backgroundColor = isFrozen ? Color.gray : new Color(0.2f, 1f, 0.4f);
+            if (GUILayout.Button(isFrozen ? "🔒 ĐANG BỊ KHÓA BĂNG (KHÔNG THỂ DI CHUYỂN)" : "▶ TEST CLICK (THỬ DI CHUYỂN)", GUILayout.Height(32)))
             {
                 block.TriggerMove();
             }
             GUI.backgroundColor = Color.white;
+            EditorGUI.EndDisabledGroup();
             EditorGUILayout.Space(5);
         }
 

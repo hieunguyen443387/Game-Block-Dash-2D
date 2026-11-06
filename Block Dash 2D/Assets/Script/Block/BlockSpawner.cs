@@ -20,6 +20,10 @@ public class BlockSpawner : MonoBehaviour
     public float blockSizePixels = 36f;
     public float pixelsPerUnit = 100f;
 
+    [Header("Freeze Settings")]
+    [Tooltip("Tự động đóng băng khối khi vừa được tạo ra")]
+    public bool spawnAsFrozen = false;
+
     [Header("Active Blocks Tracking")]
     // Danh sách lưu trữ các block đang hiển thị trong scene
     [HideInInspector] public List<BlockItem> activeBlocks = new List<BlockItem>();
@@ -67,6 +71,13 @@ public class BlockSpawner : MonoBehaviour
             {
                 activeBlocks.Add(blockItem);
             }
+        }
+
+        // Cập nhật trạng thái đóng băng nếu bật tùy chọn spawnAsFrozen
+        FreezableBlock freezable = newBlock.GetComponent<FreezableBlock>();
+        if (freezable != null && spawnAsFrozen)
+        {
+            freezable.SetFrozen(true);
         }
 
         Debug.Log("Da tao Block: " + newBlock.name);

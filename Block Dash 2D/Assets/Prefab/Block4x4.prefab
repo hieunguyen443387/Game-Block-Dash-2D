@@ -188,6 +188,7 @@ MonoBehaviour:
   onBlocked:
     m_PersistentCalls:
       m_Calls: []
+  freezableBlock: {fileID: 0}
   lastDirection: 1
   lastRotationZ: 90
 --- !u!114 &837074351844723357

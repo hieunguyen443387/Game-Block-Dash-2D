@@ -22,6 +22,9 @@ public class BlockData
 
     [Tooltip("Góc xoay quanh trục Z")]
     public float rotationZ;
+
+    [Tooltip("Trạng thái đóng băng của block (khóa di chuyển)")]
+    public bool isFrozen = false;
 }
 
 [Serializable]

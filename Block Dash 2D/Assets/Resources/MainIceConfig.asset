@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6adc7b7258d741e42bba2c8b035bbfbf, type: 3}
+  m_Name: MainIceConfig
+  m_EditorClassIdentifier: Assembly-CSharp::IceBlockConfig
+  iceSizes:
+  - sizeName: 1x2
+    boxSize: {x: 1, y: 1}
+    iceSprite: {fileID: -4992962603188562240, guid: 3e1f583180880794abfdd643c325cbe9, type: 3}
+  - sizeName: 2x2
+    boxSize: {x: 1, y: 1}
+    iceSprite: {fileID: -3494121271321509170, guid: 77a79c56470127941af9b94efb0cf2d9, type: 3}
+  - sizeName: 1x1
+    boxSize: {x: 1, y: 1}
+    iceSprite: {fileID: 7353757424166965560, guid: 5fd3220af3b9e1f4190902a53e7340e6, type: 3}
