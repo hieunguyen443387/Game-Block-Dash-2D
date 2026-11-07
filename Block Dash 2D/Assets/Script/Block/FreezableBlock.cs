@@ -394,7 +394,7 @@ public class FreezableBlock : MonoBehaviour, IPointerDownHandler
     }
 
     /// <summary>
-    /// Hiệu ứng băng tan biến: thu nhỏ và mờ dần lớp băng trước khi biến mất
+    /// Hiệu ứng băng vỡ: Tung tóe các mảnh pixel băng vụn ra xung quanh rồi tan biến
     /// </summary>
     private IEnumerator MeltIceRoutine()
     {
@@ -405,47 +405,114 @@ public class FreezableBlock : MonoBehaviour, IPointerDownHandler
 
         if (iceOverlay != null)
         {
-            Transform tr = iceOverlay.transform;
-            Vector3 origScale = tr.localScale;
+            // Lấy sprite và màu của lớp băng hiện tại để tạo các mảnh vỡ đồng màu
             SpriteRenderer sr = iceOverlay.GetComponent<SpriteRenderer>();
-            Color origColor = (sr != null) ? sr.color : Color.white;
+            Sprite iceSprite = (sr != null) ? sr.sprite : null;
+            Color iceColor = (sr != null) ? sr.color : new Color(0.7f, 0.9f, 1f, 1f);
 
-            float duration = 0.35f;
-            float elapsed = 0f;
+            // Tắt sprite băng gốc ngay lập tức để chuyển sang hiệu ứng các mảnh vỡ văng ra
+            iceOverlay.SetActive(false);
 
-            Vector3 basePos = tr.localPosition;
-            while (elapsed < duration)
+            // Tạo hiệu ứng văng mảnh pixel băng (Spawn các mảnh vụn)
+            int pixelCount = 24; // Số lượng mảnh băng văng ra
+            GameObject[] shardObjects = new GameObject[pixelCount];
+            Vector2[] shardVelocities = new Vector2[pixelCount];
+
+            // Tạo texture hạt vuông nhỏ cho mảnh vỡ nếu không có sprite chi tiết
+            Texture2D squareTex = CreateSquareTexture(4);
+            Sprite shardSprite = Sprite.Create(squareTex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+
+            Vector3 spawnPos = iceOverlay.transform.position;
+
+            for (int i = 0; i < pixelCount; i++)
             {
-                elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / duration);
+                GameObject shard = new GameObject($"IceShard_{i}");
+                shard.transform.position = spawnPos;
 
-                // Rung nhẹ
-                float shakeOffset = (1f - t) * 0.05f * Mathf.Sin(elapsed * 50f);
-                tr.localPosition = basePos + new Vector3(shakeOffset, 0, 0);
+                // Random kích thước nhỏ cho mảnh băng vụn
+                float scale = Random.Range(0.12f, 0.28f);
+                shard.transform.localScale = new Vector3(scale, scale, 1f);
 
-                // Thu nhỏ dần về 0
-                tr.localScale = Vector3.Lerp(origScale, Vector3.zero, t);
-
-                // Mờ dần alpha
+                SpriteRenderer shardSr = shard.AddComponent<SpriteRenderer>();
+                shardSr.sprite = iceSprite != null ? iceSprite : shardSprite;
+                shardSr.color = iceColor;
+                
+                // Đồng bộ layer hiển thị để các mảnh băng luôn nổi lên trên cùng
                 if (sr != null)
                 {
-                    sr.color = new Color(origColor.r, origColor.g, origColor.b, Mathf.Lerp(origColor.a, 0f, t));
+                    shardSr.sortingLayerID = sr.sortingLayerID;
+                    shardSr.sortingOrder = sr.sortingOrder + 5;
                 }
 
+                shardObjects[i] = shard;
+
+                // Hướng bay ngẫu nhiên 360 độ với vận tốc ngẫu nhiên
+                float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                float speed = Random.Range(3f, 7f);
+                shardVelocities[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * speed;
+            }
+
+            // Chạy animation bay và mờ dần trong 0.4 giây
+            float duration = 0.4f;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                float dt = Time.deltaTime;
+                elapsed += dt;
+                float t = elapsed / duration;
+
+                for (int i = 0; i < pixelCount; i++)
+                {
+                    if (shardObjects[i] != null)
+                    {
+                        // Di chuyển hạt theo vận tốc
+                        shardObjects[i].transform.position += (Vector3)(shardVelocities[i] * dt);
+                        // Giảm dần vận tốc (độ cản gió)
+                        shardVelocities[i] *= (1f - dt * 3f);
+
+                        // Mờ dần alpha và thu nhỏ hạt
+                        SpriteRenderer sSr = shardObjects[i].GetComponent<SpriteRenderer>();
+                        if (sSr != null)
+                        {
+                            Color c = sSr.color;
+                            c.a = Mathf.Lerp(1f, 0f, t);
+                            sSr.color = c;
+                        }
+                    }
+                }
                 yield return null;
             }
 
-            // Kết thúc hiệu ứng: tắt overlay và phục hồi scale/color ban đầu
-            iceOverlay.SetActive(false);
-            tr.localPosition = basePos;
-            tr.localScale = origScale;
-            if (sr != null) sr.color = origColor;
+            // Dọn dẹp toàn bộ các mảnh băng sau khi bay xong
+            for (int i = 0; i < pixelCount; i++)
+            {
+                if (shardObjects[i] != null)
+                {
+                    Destroy(shardObjects[i]);
+                }
+            }
         }
 
         isMeltAnimating = false;
-        Debug.Log($"<color=cyan>[FreezableBlock]</color> Băng trên khối '{name}' đã tan biến hoàn toàn! Chức năng di chuyển của block đã được khôi phục.");
+        Debug.Log($"<color=cyan>[FreezableBlock]</color> Băng trên khối '{name}' đã vỡ tan tành! Mở khóa di chuyển thành công.");
     }
 
+    /// <summary>
+    /// Hàm phụ trợ tạo texture ô vuông đơn giản cho mảnh vỡ băng
+    /// </summary>
+    private Texture2D CreateSquareTexture(int size)
+    {
+        Texture2D tex = new Texture2D(size, size);
+        Color[] colors = new Color[size * size];
+        for (int i = 0; i < colors.Length; i++)
+        {
+            colors[i] = Color.white;
+        }
+        tex.SetPixels(colors);
+        tex.Apply();
+        return tex;
+    }
     /// <summary>
     /// Hàm thông báo toàn cục: Gọi khi có bất kỳ khối block nào đi qua cổng thoát
     /// </summary>
