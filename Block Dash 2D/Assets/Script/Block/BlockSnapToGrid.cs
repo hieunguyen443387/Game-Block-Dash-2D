@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
+[ExecuteAlways]
 public class BlockSnapToGrid : MonoBehaviour
 {
     [Header("Board Reference")]
@@ -18,62 +19,66 @@ public class BlockSnapToGrid : MonoBehaviour
     [Tooltip("Tinh chỉnh vị trí sau khi căn vào lưới")]
     public Vector2 positionOffset = Vector2.zero;
 
-    private void Awake()
+    private void OnEnable()
     {
-        // Tự động tìm board nếu chưa được gán
-        AutoDetectBoard();
+        if (boardTransform == null)
+        {
+            AutoDetectBoard();
+        }
     }
 
     private void Reset()
     {
-        // Hàm này chạy ngay khi bạn Add Component mới vào Object trong Editor
         AutoDetectBoard();
     }
 
-    /// <summary>
-    /// Tự động tìm Board hoặc các component quản lý lưới trong Scene
-    /// </summary>
     public void AutoDetectBoard()
     {
-        if (boardTransform != null) return;
-
-        // 1. Tìm theo tên phổ biến trong Scene
-        GameObject boardObj = GameObject.Find("Board");
-        if (boardObj == null) boardObj = GameObject.Find("BoardGrid");
-        if (boardObj == null) boardObj = GameObject.Find("Grid");
-
-        if (boardObj != null)
-        {
-            boardTransform = boardObj.transform;
-            return;
-        }
-
-        // 2. Nếu không tìm thấy tên, tìm thông qua các script tạo bàn cờ (tương tự như ArrowBlock)
+        // 1. Ưu tiên tìm BoardGenerator hoặc MapSaver trước
 #if UNITY_2023_1_OR_NEWER
-        SideLine sideline = FindFirstObjectByType<SideLine>();
-        if (sideline != null) { boardTransform = sideline.transform; return; }
-
         BoardGenerator boardGen = FindFirstObjectByType<BoardGenerator>();
         if (boardGen != null) { boardTransform = boardGen.transform; return; }
 
         MapSaver saver = FindFirstObjectByType<MapSaver>();
         if (saver != null) { boardTransform = saver.transform; return; }
-#else
-        SideLine sideline = FindObjectOfType<SideLine>();
-        if (sideline != null) { boardTransform = sideline.transform; return; }
 
+        SideLine sideline = FindFirstObjectByType<SideLine>();
+        if (sideline != null) { boardTransform = sideline.transform; return; }
+#else
         BoardGenerator boardGen = FindObjectOfType<BoardGenerator>();
         if (boardGen != null) { boardTransform = boardGen.transform; return; }
 
         MapSaver saver = FindObjectOfType<MapSaver>();
         if (saver != null) { boardTransform = saver.transform; return; }
+
+        SideLine sideline = FindObjectOfType<SideLine>();
+        if (sideline != null) { boardTransform = sideline.transform; return; }
 #endif
+
+        // 2. Tìm theo tên Object chứa chữ "Board" hoặc "Grid"
+        GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
+        foreach (var obj in allObjects)
+        {
+            if ((obj.name.Contains("Board") || obj.name.Contains("Grid")) && !obj.name.Contains("SideLine"))
+            {
+                if (obj.GetComponentInChildren<Transform>() != null)
+                {
+                    foreach (Transform child in obj.transform)
+                    {
+                        if (child.name.StartsWith("Cell_"))
+                        {
+                            boardTransform = obj.transform;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     [ContextMenu("Set Position")]
     public void SetPosition()
     {
-        // Đảm bảo luôn tự động tìm board trước khi thực thi nếu chưa gán
         if (boardTransform == null)
         {
             AutoDetectBoard();
@@ -81,40 +86,31 @@ public class BlockSnapToGrid : MonoBehaviour
 
         if (boardTransform == null)
         {
-            Debug.LogWarning("Vẫn không tìm thấy Board Transform trong Scene! Hãy kiểm tra lại tên Object Board.");
+            Debug.LogWarning("Vẫn không tìm thấy Board Transform trong Scene!");
             return;
         }
 
-        // Tìm SpriteRenderer để lấy kích thước thực tế của Block.
-        SpriteRenderer spriteRenderer =
-            GetComponentInChildren<SpriteRenderer>();
+        SpriteRenderer spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
         if (spriteRenderer == null)
         {
-            Debug.LogWarning(
-                "Không tìm thấy SpriteRenderer trên Block!"
-            );
+            Debug.LogWarning("Không tìm thấy SpriteRenderer trên Block!");
             return;
         }
 
-        Transform[] allObjects =
-            boardTransform.GetComponentsInChildren<Transform>(true);
+        Transform[] allObjects = boardTransform.GetComponentsInChildren<Transform>(true);
 
         Transform nearestCell = null;
         float minDistance = float.MaxValue;
 
         Vector3 blockPosition = transform.position;
 
-        // Tìm Cell gần tâm Block nhất.
         foreach (Transform cell in allObjects)
         {
             if (!cell.name.StartsWith("Cell_"))
                 continue;
 
-            float distance = (
-                (Vector2)cell.position -
-                (Vector2)blockPosition
-            ).sqrMagnitude;
+            float distance = ((Vector2)cell.position - (Vector2)blockPosition).sqrMagnitude;
 
             if (distance < minDistance)
             {
@@ -125,9 +121,7 @@ public class BlockSnapToGrid : MonoBehaviour
 
         if (nearestCell == null)
         {
-            Debug.LogWarning(
-                "Không tìm thấy Cell nào trong Board!"
-            );
+            Debug.LogWarning("Không tìm thấy Cell nào có tên bắt đầu bằng 'Cell_' trong Board!");
             return;
         }
 
@@ -138,30 +132,24 @@ public class BlockSnapToGrid : MonoBehaviour
         }
 #endif
 
-        // Lấy kích thước Block theo World Units.
         Bounds bounds = spriteRenderer.bounds;
 
         float blockWidth = bounds.size.x;
         float blockHeight = bounds.size.y;
 
-        // Tính góc dưới bên trái của Block so với Transform.
         Vector3 blockBottomLeftOffset = new Vector3(
             bounds.min.x - transform.position.x,
             bounds.min.y - transform.position.y,
             0f
         );
 
-        // Transform của Cell nằm ở tâm ô.
-        // Chuyển sang góc dưới bên trái của Cell.
         Vector3 cellBottomLeft = new Vector3(
             nearestCell.position.x - cellSize * 0.5f,
             nearestCell.position.y - cellSize * 0.5f,
             blockPosition.z
         );
 
-        // Đặt góc dưới bên trái Block trùng góc dưới bên trái Cell.
-        Vector3 targetPosition = cellBottomLeft
-            - blockBottomLeftOffset;
+        Vector3 targetPosition = cellBottomLeft - blockBottomLeftOffset;
 
         targetPosition.x += positionOffset.x;
         targetPosition.y += positionOffset.y;
@@ -176,11 +164,7 @@ public class BlockSnapToGrid : MonoBehaviour
         }
 #endif
 
-        Debug.Log(
-            $"Block đã căn vào {nearestCell.name}\n" +
-            $"Kích thước Sprite: {blockWidth:F2} x {blockHeight:F2}\n" +
-            $"Vị trí mới: {transform.position}"
-        );
+        Debug.Log($"Block đã căn vào {nearestCell.name}\nKích thước Sprite: {blockWidth:F2} x {blockHeight:F2}\nVị trí mới: {transform.position}");
     }
 }
 
@@ -203,9 +187,3 @@ public class BlockSnapToGridEditor : Editor
     }
 }
 #endif
-```[cite: 8]
-
-### Cách cải tiến này hoạt động:
-1. **Hàm `Reset()`**: Ngay khi bạn kéo thả một Prefab mới ra Scene hoặc Add component này vào một Object, Unity sẽ tự động kích hoạt hàm `Reset()` và tự tìm kiếm GameObject có tên `Board` (hoặc các component sinh bàn cờ như `BoardGenerator`, `SideLine`) để điền sẵn vào ô `Board Transform` cho bạn.
-2. **Hàm `Awake()`**: Khi game chạy hoặc block được sinh ra (Instantiate), script sẽ tự động quét tìm board nếu ô `Board Transform` đang để trống.
-3. **Tự động phòng hộ trong `SetPosition()`**: Nếu bạn quên gán, ngay khi bấm nút **Set Position**, code cũng sẽ tự động đi tìm board trước khi tính toán tọa độ mà không báo lỗi `Warning` gián đoạn nữa[cite: 8].
