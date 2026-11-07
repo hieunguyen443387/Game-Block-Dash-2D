@@ -15,7 +15,7 @@ public class BlockSpawner : MonoBehaviour
     public List<BlockOption> blockList = new List<BlockOption>();
 
     [Header("Spawn Settings")]
-    public int selectedBlockIndex = 0;
+    [HideInInspector] public int selectedBlockIndex = 0;
     public Vector2 spawnPosition = Vector2.zero;
     public float blockSizePixels = 36f;
     public float pixelsPerUnit = 100f;
@@ -27,7 +27,6 @@ public class BlockSpawner : MonoBehaviour
     public int spawnFreezeCount = 3;
 
     [Header("Active Blocks Tracking")]
-    // Danh sách lưu trữ các block đang hiển thị trong scene
     [HideInInspector] public List<BlockItem> activeBlocks = new List<BlockItem>();
 
     public void CreateBlock()
@@ -52,7 +51,6 @@ public class BlockSpawner : MonoBehaviour
             return;
         }
 
-        // Truyền thêm 'transform' vào đây để nhận BlockSpawner làm đối tượng cha
         GameObject newBlock = Instantiate(
             prefab,
             new Vector3(spawnPosition.x, spawnPosition.y, 0f),
@@ -65,7 +63,6 @@ public class BlockSpawner : MonoBehaviour
         float size = blockSizePixels / pixelsPerUnit;
         newBlock.transform.localScale = Vector3.one * size;
 
-        // Đảm bảo block có gắn component BlockItem
         BlockItem blockItem = newBlock.GetComponent<BlockItem>();
         if (blockItem != null)
         {
@@ -75,7 +72,6 @@ public class BlockSpawner : MonoBehaviour
             }
         }
 
-        // Cập nhật trạng thái đóng băng nếu bật tùy chọn spawnAsFrozen
         FreezableBlock freezable = newBlock.GetComponent<FreezableBlock>();
         if (freezable != null && spawnAsFrozen)
         {
@@ -85,9 +81,6 @@ public class BlockSpawner : MonoBehaviour
         Debug.Log("Da tao Block: " + newBlock.name);
     }
 
-    /// <summary>
-    /// Xóa toàn bộ các block đang quản lý và các object con trực tiếp
-    /// </summary>
     [ContextMenu("Clear All Blocks")]
     public void ClearAllBlocks()
     {
@@ -108,7 +101,6 @@ public class BlockSpawner : MonoBehaviour
         Debug.Log("<color=orange>Đã xóa toàn bộ block trên màn hình!</color>");
     }
 
-    // Hàm hỗ trợ xóa block khỏi danh sách quản lý khi nó bị hủy
     public void RemoveBlockFromList(BlockItem blockItem)
     {
         if (activeBlocks.Contains(blockItem))
@@ -124,9 +116,66 @@ public class BlockSpawnerEditor : Editor
 {
     public override void OnInspectorGUI()
     {
-        DrawDefaultInspector();
-
         BlockSpawner spawner = (BlockSpawner)target;
+        serializedObject.Update();
+
+        // 1. Vẽ danh sách Block List trước
+        SerializedProperty blockListProp = serializedObject.FindProperty("blockList");
+        EditorGUILayout.PropertyField(blockListProp, true);
+
+        EditorGUILayout.Space(5);
+        EditorGUILayout.LabelField("Spawn Settings", EditorStyles.boldLabel);
+
+        // 2. Tạo Dropdown tự động dựa trên blockList hiện có
+        SerializedProperty selectedIndexProp = serializedObject.FindProperty("selectedBlockIndex");
+        string[] displayOptions;
+
+        if (spawner.blockList == null || spawner.blockList.Count == 0)
+        {
+            displayOptions = new string[] { "Danh sách trống (Hãy thêm Block phía trên)" };
+            selectedIndexProp.intValue = 0;
+        }
+        else
+        {
+            displayOptions = new string[spawner.blockList.Count];
+            for (int i = 0; i < spawner.blockList.Count; i++)
+            {
+                string blockName = spawner.blockList[i].blockName;
+                if (string.IsNullOrEmpty(blockName)) blockName = $"Block Không Tên {i}";
+                displayOptions[i] = $"{i}: {blockName}";
+            }
+
+            // Đảm bảo index không bị tràn ra ngoài giới hạn list
+            if (selectedIndexProp.intValue >= spawner.blockList.Count)
+            {
+                selectedIndexProp.intValue = 0;
+            }
+        }
+
+        // Hiển thị Dropdown trong Inspector (Sửa thành EditorGUI.EndChangeCheck())
+        EditorGUI.BeginChangeCheck();
+        int newIndex = EditorGUILayout.Popup("Selected Block", selectedIndexProp.intValue, displayOptions);
+        if (EditorGUI.EndChangeCheck() || newIndex != selectedIndexProp.intValue)
+        {
+            if (spawner.blockList != null && spawner.blockList.Count > 0)
+            {
+                selectedIndexProp.intValue = Mathf.Clamp(newIndex, 0, spawner.blockList.Count - 1);
+            }
+        }
+
+        // 3. Vẽ các thuộc tính còn lại của Spawner tự động (trừ script, blockList và index cũ)
+        SerializedProperty prop = serializedObject.GetIterator();
+        bool enterChildren = true;
+        while (prop.NextVisible(enterChildren))
+        {
+            enterChildren = false;
+            if (prop.name == "m_Script" || prop.name == "blockList" || prop.name == "selectedBlockIndex")
+                continue;
+
+            EditorGUILayout.PropertyField(prop, true);
+        }
+
+        serializedObject.ApplyModifiedProperties();
 
         EditorGUILayout.Space(10);
 
