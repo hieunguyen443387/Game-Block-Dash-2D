@@ -118,7 +118,7 @@ public class BoosterController : MonoBehaviour
     public void SetActiveBooster(MonoBehaviour booster)
     {
         currentActiveBooster = booster;
-        Debug.Log($"<color=yellow>[BoosterController]</color> Đã kích hoạt Booster: {(booster != null ? booster.GetType().Name : "None")}. Hãy chọn block trên bàn cờ!");
+        Debug.Log($"<color=yellow>[BoosterController]</color> Đã kích hoạt Booster: {(booster != null ? booster.GetType().Name : "None")}.");
     }
 
     /// <summary>
@@ -167,7 +167,7 @@ public class BoosterController : MonoBehaviour
         {
             reverseBooster.Execute(clickedBlock);
         }
-        // 3. Nếu booster hiện tại là ShuffleBooster
+        // 3. Nếu booster hiện tại là ShuffleBooster (an toàn gọi phòng hờ)
         else if (currentActiveBooster is ShuffleBooster shuffleBooster)
         {
             shuffleBooster.Execute(clickedBlock);

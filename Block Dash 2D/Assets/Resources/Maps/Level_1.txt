@@ -401,10 +401,30 @@
         {
             "blockType": "ArrowBlock",
             "gridX": 2,
+            "gridY": 11,
+            "posX": -1.1024932861328126,
+            "posY": 5.448753356933594,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 2,
             "gridY": 8,
-            "posX": -1.5512464046478272,
+            "posX": -1.5512466430664063,
             "posY": 2.8975071907043459,
             "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 1,
+            "gridY": 7,
+            "posX": -2.1024932861328127,
+            "posY": 1.4487534761428834,
+            "rotationZ": 0.0,
             "isFrozen": false,
             "freezeCount": 3
         },
@@ -412,7 +432,7 @@
             "blockType": "ArrowBlock",
             "gridX": 0,
             "gridY": 10,
-            "posX": -3.551246404647827,
+            "posX": -3.5512466430664064,
             "posY": 4.897507190704346,
             "rotationZ": 90.0,
             "isFrozen": false,
@@ -420,9 +440,29 @@
         },
         {
             "blockType": "ArrowBlock",
-            "gridX": 5,
+            "gridX": 3,
+            "gridY": 7,
+            "posX": -0.5512464046478272,
+            "posY": 1.8975071907043458,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 3,
+            "gridY": 5,
+            "posX": -0.07756233215332031,
+            "posY": -0.07756233215332031,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 2,
             "gridY": 8,
-            "posX": 1.448753833770752,
+            "posX": -1.5512466430664063,
             "posY": 2.8975071907043459,
             "rotationZ": 270.0,
             "isFrozen": false,
@@ -430,11 +470,31 @@
         },
         {
             "blockType": "ArrowBlock",
-            "gridX": 2,
-            "gridY": 11,
-            "posX": -1.1024930477142335,
-            "posY": 5.448753356933594,
+            "gridX": 4,
+            "gridY": 7,
+            "posX": 0.8975067138671875,
+            "posY": 1.4487534761428834,
             "rotationZ": 0.0,
+            "isFrozen": true,
+            "freezeCount": 5
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 5,
+            "gridY": 8,
+            "posX": 1.4487533569335938,
+            "posY": 2.8975071907043459,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 3,
+            "gridY": 7,
+            "posX": -0.5512466430664063,
+            "posY": 1.8975070714950562,
+            "rotationZ": 90.0,
             "isFrozen": false,
             "freezeCount": 3
         },
@@ -450,11 +510,131 @@
         },
         {
             "blockType": "ArrowBlock",
+            "gridX": 1,
+            "gridY": 10,
+            "posX": -2.5512466430664064,
+            "posY": 4.897507190704346,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 1,
+            "gridY": 10,
+            "posX": -2.5512466430664064,
+            "posY": 4.897507190704346,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "Free Move Block",
+            "gridX": 4,
+            "gridY": 8,
+            "posX": 0.44875335693359377,
+            "posY": 2.448753595352173,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "TwoWayBlock",
+            "gridX": 3,
+            "gridY": 9,
+            "posX": -0.07756233215332031,
+            "posY": 3.473684310913086,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 0,
+            "gridY": 10,
+            "posX": -3.551246404647827,
+            "posY": 4.897507190704346,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 5,
+            "gridY": 8,
+            "posX": 1.4487533569335938,
+            "posY": 2.8975071907043459,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 3,
+            "gridY": 5,
+            "posX": -0.07756233215332031,
+            "posY": -0.07756233215332031,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "TwoWayBlock",
+            "gridX": 3,
+            "gridY": 9,
+            "posX": -0.07756233215332031,
+            "posY": 3.473684310913086,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 4,
+            "gridY": 7,
+            "posX": 0.8975067138671875,
+            "posY": 1.4487534761428834,
+            "rotationZ": 0.0,
+            "isFrozen": true,
+            "freezeCount": 5
+        },
+        {
+            "blockType": "ArrowBlock",
             "gridX": 4,
             "gridY": 10,
-            "posX": 0.44875359535217287,
+            "posX": 0.44875335693359377,
             "posY": 4.897507190704346,
             "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 5,
+            "gridY": 8,
+            "posX": 1.448753833770752,
+            "posY": 2.8975071907043459,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "Free Move Block",
+            "gridX": 4,
+            "gridY": 8,
+            "posX": 0.44875335693359377,
+            "posY": 2.448753595352173,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 1,
+            "gridY": 10,
+            "posX": -2.551246404647827,
+            "posY": 4.897507190704346,
+            "rotationZ": 90.0,
             "isFrozen": false,
             "freezeCount": 3
         },
@@ -464,6 +644,76 @@
             "gridY": 9,
             "posX": -0.07756233215332031,
             "posY": 3.473684310913086,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 2,
+            "gridY": 10,
+            "posX": -1.1024930477142335,
+            "posY": 4.448753356933594,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 3,
+            "gridY": 7,
+            "posX": -0.5512466430664063,
+            "posY": 1.8975070714950562,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 0,
+            "gridY": 10,
+            "posX": -3.5512466430664064,
+            "posY": 4.897507190704346,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "Free Move Block",
+            "gridX": 4,
+            "gridY": 8,
+            "posX": 0.44875335693359377,
+            "posY": 2.448753595352173,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 4,
+            "gridY": 10,
+            "posX": 0.44875359535217287,
+            "posY": 4.897507190704346,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 4,
+            "gridY": 10,
+            "posX": 0.44875335693359377,
+            "posY": 4.897507190704346,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 3,
+            "gridY": 5,
+            "posX": -0.07756233215332031,
+            "posY": -0.07756233215332031,
             "rotationZ": 0.0,
             "isFrozen": false,
             "freezeCount": 0
@@ -480,11 +730,11 @@
         },
         {
             "blockType": "ArrowBlock",
-            "gridX": 1,
-            "gridY": 10,
-            "posX": -2.551246404647827,
-            "posY": 4.897507190704346,
-            "rotationZ": 90.0,
+            "gridX": 2,
+            "gridY": 11,
+            "posX": -1.1024930477142335,
+            "posY": 5.448753356933594,
+            "rotationZ": 0.0,
             "isFrozen": false,
             "freezeCount": 3
         },
@@ -492,41 +742,61 @@
             "blockType": "ArrowBlock",
             "gridX": 2,
             "gridY": 10,
-            "posX": -1.1024930477142335,
+            "posX": -1.1024932861328126,
             "posY": 4.448753356933594,
             "rotationZ": 0.0,
             "isFrozen": false,
             "freezeCount": 3
         },
         {
-            "blockType": "Free Move Block",
-            "gridX": 4,
-            "gridY": 8,
-            "posX": 0.44875335693359377,
-            "posY": 2.448753595352173,
-            "rotationZ": 0.0,
-            "isFrozen": false,
-            "freezeCount": 0
-        },
-        {
             "blockType": "ArrowBlock",
-            "gridX": 3,
-            "gridY": 5,
-            "posX": -0.07756233215332031,
-            "posY": -0.07756233215332031,
-            "rotationZ": 0.0,
-            "isFrozen": false,
-            "freezeCount": 0
-        },
-        {
-            "blockType": "ArrowBlock",
-            "gridX": 3,
+            "gridX": 1,
             "gridY": 7,
-            "posX": -0.5512464046478272,
-            "posY": 1.8975071907043458,
-            "rotationZ": 90.0,
+            "posX": -2.1024932861328127,
+            "posY": 1.4487534761428834,
+            "rotationZ": 0.0,
             "isFrozen": false,
             "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 2,
+            "gridY": 10,
+            "posX": -1.1024932861328126,
+            "posY": 4.448753356933594,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 2,
+            "gridY": 11,
+            "posX": -1.1024932861328126,
+            "posY": 5.448753356933594,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 2,
+            "gridY": 8,
+            "posX": -1.5512464046478272,
+            "posY": 2.8975071907043459,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "RetreatArrowBlock",
+            "gridX": 1,
+            "gridY": 6,
+            "posX": -2.1024930477142336,
+            "posY": 0.4487534761428833,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0
         }
     ],
     "exitGates": [
