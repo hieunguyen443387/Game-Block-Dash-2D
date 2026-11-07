@@ -25,6 +25,9 @@ public class BlockData
 
     [Tooltip("Trạng thái đóng băng của block (khóa di chuyển)")]
     public bool isFrozen = false;
+
+    [Tooltip("Số đếm trên khối băng (giảm khi có block vào cổng hoặc dùng Booster Remove)")]
+    public int freezeCount = 0;
 }
 
 [Serializable]

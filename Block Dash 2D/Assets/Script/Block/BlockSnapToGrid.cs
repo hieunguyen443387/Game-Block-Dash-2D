@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -8,7 +7,7 @@ using UnityEditor;
 public class BlockSnapToGrid : MonoBehaviour
 {
     [Header("Board Reference")]
-    [Tooltip("Kéo GameObject Board chứa các Cell vào đây")]
+    [Tooltip("Kéo GameObject Board chứa các Cell vào đây (Tự động tìm nếu để trống)")]
     public Transform boardTransform;
 
     [Header("Cell Settings")]
@@ -19,12 +18,70 @@ public class BlockSnapToGrid : MonoBehaviour
     [Tooltip("Tinh chỉnh vị trí sau khi căn vào lưới")]
     public Vector2 positionOffset = Vector2.zero;
 
+    private void Awake()
+    {
+        // Tự động tìm board nếu chưa được gán
+        AutoDetectBoard();
+    }
+
+    private void Reset()
+    {
+        // Hàm này chạy ngay khi bạn Add Component mới vào Object trong Editor
+        AutoDetectBoard();
+    }
+
+    /// <summary>
+    /// Tự động tìm Board hoặc các component quản lý lưới trong Scene
+    /// </summary>
+    public void AutoDetectBoard()
+    {
+        if (boardTransform != null) return;
+
+        // 1. Tìm theo tên phổ biến trong Scene
+        GameObject boardObj = GameObject.Find("Board");
+        if (boardObj == null) boardObj = GameObject.Find("BoardGrid");
+        if (boardObj == null) boardObj = GameObject.Find("Grid");
+
+        if (boardObj != null)
+        {
+            boardTransform = boardObj.transform;
+            return;
+        }
+
+        // 2. Nếu không tìm thấy tên, tìm thông qua các script tạo bàn cờ (tương tự như ArrowBlock)
+#if UNITY_2023_1_OR_NEWER
+        SideLine sideline = FindFirstObjectByType<SideLine>();
+        if (sideline != null) { boardTransform = sideline.transform; return; }
+
+        BoardGenerator boardGen = FindFirstObjectByType<BoardGenerator>();
+        if (boardGen != null) { boardTransform = boardGen.transform; return; }
+
+        MapSaver saver = FindFirstObjectByType<MapSaver>();
+        if (saver != null) { boardTransform = saver.transform; return; }
+#else
+        SideLine sideline = FindObjectOfType<SideLine>();
+        if (sideline != null) { boardTransform = sideline.transform; return; }
+
+        BoardGenerator boardGen = FindObjectOfType<BoardGenerator>();
+        if (boardGen != null) { boardTransform = boardGen.transform; return; }
+
+        MapSaver saver = FindObjectOfType<MapSaver>();
+        if (saver != null) { boardTransform = saver.transform; return; }
+#endif
+    }
+
     [ContextMenu("Set Position")]
     public void SetPosition()
     {
+        // Đảm bảo luôn tự động tìm board trước khi thực thi nếu chưa gán
         if (boardTransform == null)
         {
-            Debug.LogWarning("Chưa gán Board Transform!");
+            AutoDetectBoard();
+        }
+
+        if (boardTransform == null)
+        {
+            Debug.LogWarning("Vẫn không tìm thấy Board Transform trong Scene! Hãy kiểm tra lại tên Object Board.");
             return;
         }
 
@@ -146,3 +203,9 @@ public class BlockSnapToGridEditor : Editor
     }
 }
 #endif
+```[cite: 8]
+
+### Cách cải tiến này hoạt động:
+1. **Hàm `Reset()`**: Ngay khi bạn kéo thả một Prefab mới ra Scene hoặc Add component này vào một Object, Unity sẽ tự động kích hoạt hàm `Reset()` và tự tìm kiếm GameObject có tên `Board` (hoặc các component sinh bàn cờ như `BoardGenerator`, `SideLine`) để điền sẵn vào ô `Board Transform` cho bạn.
+2. **Hàm `Awake()`**: Khi game chạy hoặc block được sinh ra (Instantiate), script sẽ tự động quét tìm board nếu ô `Board Transform` đang để trống.
+3. **Tự động phòng hộ trong `SetPosition()`**: Nếu bạn quên gán, ngay khi bấm nút **Set Position**, code cũng sẽ tự động đi tìm board trước khi tính toán tọa độ mà không báo lỗi `Warning` gián đoạn nữa[cite: 8].

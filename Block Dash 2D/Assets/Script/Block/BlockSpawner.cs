@@ -23,6 +23,8 @@ public class BlockSpawner : MonoBehaviour
     [Header("Freeze Settings")]
     [Tooltip("Tự động đóng băng khối khi vừa được tạo ra")]
     public bool spawnAsFrozen = false;
+    [Tooltip("Số đếm trên khối băng khi sinh ra")]
+    public int spawnFreezeCount = 3;
 
     [Header("Active Blocks Tracking")]
     // Danh sách lưu trữ các block đang hiển thị trong scene
@@ -77,7 +79,7 @@ public class BlockSpawner : MonoBehaviour
         FreezableBlock freezable = newBlock.GetComponent<FreezableBlock>();
         if (freezable != null && spawnAsFrozen)
         {
-            freezable.SetFrozen(true);
+            freezable.SetFrozen(true, spawnFreezeCount > 0 ? spawnFreezeCount : 1);
         }
 
         Debug.Log("Da tao Block: " + newBlock.name);

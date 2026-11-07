@@ -188,17 +188,20 @@ public class MapLoader : MonoBehaviour
                     item.gridY = b.gridY;
                 }
 
-                // Cập nhật trạng thái đóng băng từ dữ liệu đã lưu
+                // Cập nhật trạng thái đóng băng và số đếm từ dữ liệu đã lưu
                 FreezableBlock freezable = blockObj.GetComponent<FreezableBlock>();
+                int fCount = (b.freezeCount > 0) ? b.freezeCount : (b.isFrozen ? 1 : 0);
                 if (freezable != null)
                 {
-                    freezable.SetFrozen(b.isFrozen);
+                    freezable.freezeCount = fCount;
+                    freezable.SetFrozen(b.isFrozen, fCount);
                 }
                 else if (b.isFrozen)
                 {
                     // Nếu prefab chưa có component FreezableBlock nhưng dữ liệu map lưu là đóng băng
                     FreezableBlock addedFreezable = blockObj.AddComponent<FreezableBlock>();
-                    addedFreezable.SetFrozen(true);
+                    addedFreezable.freezeCount = fCount;
+                    addedFreezable.SetFrozen(true, fCount);
                 }
 
                 spawnedCount++;

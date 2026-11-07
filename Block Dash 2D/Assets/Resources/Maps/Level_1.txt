@@ -405,7 +405,18 @@
             "posX": -1.1024930477142335,
             "posY": 0.4487534761428833,
             "rotationZ": 0.0,
-            "isFrozen": true
+            "isFrozen": true,
+            "freezeCount": 3
+        },
+        {
+            "blockType": "ArrowBlock",
+            "gridX": 5,
+            "gridY": 6,
+            "posX": 1.8975069522857667,
+            "posY": 0.4487534761428833,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3
         }
     ],
     "exitGates": [

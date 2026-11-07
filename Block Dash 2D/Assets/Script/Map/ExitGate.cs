@@ -36,10 +36,34 @@ public class ExitGate : MonoBehaviour
     [Header("3. Sự kiện (Unity Events)")]
     public UnityEvent<MonoBehaviour> onBlockExit; // Hỗ trợ linh hoạt cả ArrowBlock và TwoWayBlock
 
+    [Header("4. Đếm số Block vào cổng")]
+    [Tooltip("Số lượng block đã đi qua cổng này")]
+    public int exitedBlockCount = 0;
+
+    // Tổng số block đã đi qua tất cả các cổng trong màn chơi
+    public static int TotalBlocksExitedAcrossAllGates = 0;
+
     // Danh sách các cổng thoát đang hoạt động trong Scene
     public static List<ExitGate> activeGates = new List<ExitGate>();
 
     private Collider2D gateCollider;
+
+    /// <summary>
+    /// Ghi nhận khi có một block đã vào cổng thành công
+    /// </summary>
+    public void NotifyBlockExited(MonoBehaviour block)
+    {
+        exitedBlockCount++;
+        TotalBlocksExitedAcrossAllGates++;
+
+        Debug.Log($"<color=green>[ExitGate]</color> Khối block '{(block != null ? block.name : "null")}' đã vào cổng! (Cổng này: {exitedBlockCount}, Tổng cộng: {TotalBlocksExitedAcrossAllGates})");
+
+        // Kích hoạt UnityEvent
+        onBlockExit?.Invoke(block);
+
+        // Thông báo giảm số đếm trên tất cả các khối băng đang có trong màn chơi
+        FreezableBlock.OnBlockEnteredGate();
+    }
 
     private void Awake()
     {
@@ -199,8 +223,7 @@ public class ExitGate : MonoBehaviour
             yield return null;
         }
 
-        Debug.Log($"<color=green>[ExitGate]</color> Khối block '{block.name}' đã thoát khỏi bàn cờ thành công!");
-        onBlockExit?.Invoke(block);
+        NotifyBlockExited(block);
 
         if (destroyBlockOnExit)
         {
@@ -246,8 +269,7 @@ public class ExitGate : MonoBehaviour
             yield return null;
         }
 
-        Debug.Log($"<color=green>[ExitGate]</color> Khối TwoWayBlock '{block.name}' đã thoát khỏi bàn cờ thành công!");
-        onBlockExit?.Invoke(block);
+        NotifyBlockExited(block);
 
         if (destroyBlockOnExit)
         {
@@ -293,8 +315,7 @@ public class ExitGate : MonoBehaviour
             yield return null;
         }
 
-        Debug.Log($"<color=green>[ExitGate]</color> Khối RetreatArrowBlock '{block.name}' đã thoát khỏi bàn cờ thành công!");
-        onBlockExit?.Invoke(block);
+        NotifyBlockExited(block);
 
         if (destroyBlockOnExit)
         {

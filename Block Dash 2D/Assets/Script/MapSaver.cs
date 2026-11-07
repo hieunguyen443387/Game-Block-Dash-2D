@@ -221,14 +221,20 @@ public class MapSaver : MonoBehaviour
 
             // Kiểm tra trạng thái đóng băng từ FreezableBlock hoặc ArrowBlock
             bool isBlockFrozen = false;
+            int freezeCount = 0;
             FreezableBlock freezable = item.GetComponent<FreezableBlock>();
             if (freezable != null)
             {
                 isBlockFrozen = freezable.isFrozen;
+                freezeCount = freezable.freezeCount;
             }
             else if (item is ArrowBlock arrow && arrow.IsFrozen)
             {
                 isBlockFrozen = true;
+                if (arrow.freezableBlock != null)
+                {
+                    freezeCount = arrow.freezableBlock.freezeCount;
+                }
             }
 
             BlockData bData = new BlockData
@@ -239,7 +245,8 @@ public class MapSaver : MonoBehaviour
                 posX = blockTr.position.x,
                 posY = blockTr.position.y,
                 rotationZ = blockTr.eulerAngles.z,
-                isFrozen = isBlockFrozen
+                isFrozen = isBlockFrozen,
+                freezeCount = freezeCount
             };
 
             mapData.blocks.Add(bData);

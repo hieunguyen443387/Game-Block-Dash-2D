@@ -1,4 +1,7 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
 #if UNITY_EDITOR
@@ -9,40 +12,109 @@ using UnityEditor;
 [DisallowMultipleComponent]
 public class FreezableBlock : MonoBehaviour, IPointerDownHandler
 {
-    [Header("Trạng thái đóng băng")]
+    [Header("1. Cấu hình Đóng Băng")]
     [Tooltip("Tích chọn để bật lớp băng và khóa di chuyển của ArrowBlock. Bỏ chọn để mở khóa di chuyển.")]
     public bool isFrozen = false;
 
-    [Header("Đối tượng con chứa hình băng")]
+    [Tooltip("Số đếm trên khối băng (mỗi khi có 1 block vào cổng hoặc dùng Booster Remove sẽ giảm đi 1). Khi về 0 sẽ tan băng.")]
+    [Range(0, 99)]
+    public int freezeCount = 1;
+
+    [Header("2. Đối tượng con & Giao diện")]
     [Tooltip("Object hiển thị lớp băng phủ lên block")]
     public GameObject iceOverlay;
 
-    [Header("Liên kết ArrowBlock")]
+    [Tooltip("SpriteRenderer hiển thị số đếm Pixel Art (tự động tạo hoặc tìm)")]
+    public SpriteRenderer numberRenderer;
+
+    [Tooltip("SpriteRenderer hiển thị hàng chục nếu số đếm >= 10")]
+    public SpriteRenderer numberRendererTens;
+
+    [Header("3. Liên kết ArrowBlock")]
     [Tooltip("Tham chiếu ArrowBlock (tự động tìm trên cùng GameObject nếu để trống)")]
     public ArrowBlock arrowBlock;
+
+    [Header("4. Sự kiện")]
+    public UnityEvent onIceBroken;
+    public UnityEvent<int> onFreezeCountChanged;
+
+    private bool isMeltAnimating = false;
+    private Coroutine currentMeltRoutine;
 
     private void Awake()
     {
         AutoConnect();
+        CleanupLegacyText();
+        EnsureNumberDisplay();
         UpdateFreezeState();
     }
 
     private void Start()
     {
         AutoConnect();
+        CleanupLegacyText();
+        EnsureNumberDisplay();
         UpdateFreezeState();
     }
 
     private void OnValidate()
     {
         AutoConnect();
+
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            EditorApplication.delayCall -= SafeEditorUpdate;
+            EditorApplication.delayCall += SafeEditorUpdate;
+        }
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void OnDisable()
+    {
+        EditorApplication.delayCall -= SafeEditorUpdate;
+    }
+
+    public void SafeEditorUpdate()
+    {
+        if (this == null) return;
+        CleanupLegacyText();
+        EnsureNumberDisplay();
         UpdateFreezeState();
     }
+#endif
 
     private void Reset()
     {
         AutoConnect();
+        CleanupLegacyText();
+        EnsureNumberDisplay();
         UpdateFreezeState();
+    }
+
+    /// <summary>
+    /// Xóa bỏ đối tượng TextMeshPro cũ nếu có để loại bỏ hoàn toàn icon chữ 'T' của Unity Scene View
+    /// </summary>
+    public void CleanupLegacyText()
+    {
+        Transform parentTr = (iceOverlay != null) ? iceOverlay.transform : transform;
+        Transform oldText = parentTr.Find("IceCountText");
+        if (oldText == null) oldText = transform.Find("IceCountText");
+
+        if (oldText != null)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(oldText.gameObject);
+            }
+            else
+            {
+#if UNITY_EDITOR
+                Undo.DestroyObjectImmediate(oldText.gameObject);
+#endif
+            }
+        }
     }
 
     /// <summary>
@@ -62,7 +134,8 @@ public class FreezableBlock : MonoBehaviour, IPointerDownHandler
 
         if (iceOverlay == null)
         {
-            Transform t = transform.Find("IceOverlay");
+            Transform t = transform.Find("Ice Block");
+            if (t == null) t = transform.Find("IceOverlay");
             if (t == null) t = transform.Find("Ice");
             if (t == null) t = transform.Find("Ice Overlay");
             if (t != null) iceOverlay = t.gameObject;
@@ -70,43 +143,359 @@ public class FreezableBlock : MonoBehaviour, IPointerDownHandler
     }
 
     /// <summary>
-    /// Cập nhật hiển thị lớp băng theo trạng thái isFrozen
+    /// Đảm bảo luôn có SpriteRenderer hiển thị số đếm Pixel Art (không dùng Text, không có chữ T)
+    /// </summary>
+    public void EnsureNumberDisplay()
+    {
+        Transform parentTr = (iceOverlay != null) ? iceOverlay.transform : transform;
+
+        // 1. Tìm hoặc tạo SpriteRenderer cho số hàng đơn vị / số chính
+        if (numberRenderer == null)
+        {
+            Transform existing = parentTr.Find("IcePixelNumber");
+            if (existing != null)
+            {
+                numberRenderer = existing.GetComponent<SpriteRenderer>();
+            }
+
+            if (numberRenderer == null)
+            {
+                GameObject numObj = new GameObject("IcePixelNumber");
+                numObj.transform.SetParent(parentTr, false);
+                numObj.transform.localPosition = new Vector3(0, 0, -0.1f);
+                numObj.transform.localScale = Vector3.one;
+
+                numberRenderer = numObj.AddComponent<SpriteRenderer>();
+
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    Undo.RegisterCreatedObjectUndo(numObj, "Create IcePixelNumber");
+                }
+#endif
+            }
+        }
+
+        // 2. Tìm hoặc tạo SpriteRenderer cho số hàng chục (nếu freezeCount >= 10)
+        if (numberRendererTens == null)
+        {
+            Transform existingTens = parentTr.Find("IcePixelNumber_Tens");
+            if (existingTens != null)
+            {
+                numberRendererTens = existingTens.GetComponent<SpriteRenderer>();
+            }
+            else if (freezeCount >= 10)
+            {
+                GameObject tensObj = new GameObject("IcePixelNumber_Tens");
+                tensObj.transform.SetParent(parentTr, false);
+                tensObj.transform.localPosition = new Vector3(-0.16f, 0, -0.1f);
+                tensObj.transform.localScale = Vector3.one;
+
+                numberRendererTens = tensObj.AddComponent<SpriteRenderer>();
+
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    Undo.RegisterCreatedObjectUndo(tensObj, "Create IcePixelNumber_Tens");
+                }
+#endif
+            }
+        }
+
+        // Đồng bộ Sorting Layer với Sprite băng để số luôn nổi rõ nét
+        SpriteRenderer overlaySr = (iceOverlay != null) ? iceOverlay.GetComponent<SpriteRenderer>() : GetComponent<SpriteRenderer>();
+        if (overlaySr != null)
+        {
+            if (numberRenderer != null)
+            {
+                numberRenderer.sortingLayerID = overlaySr.sortingLayerID;
+                numberRenderer.sortingOrder = overlaySr.sortingOrder + 2;
+            }
+            if (numberRendererTens != null)
+            {
+                numberRendererTens.sortingLayerID = overlaySr.sortingLayerID;
+                numberRendererTens.sortingOrder = overlaySr.sortingOrder + 2;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cập nhật hiển thị lớp băng và số đếm pixel theo trạng thái isFrozen & freezeCount
     /// </summary>
     public void UpdateFreezeState()
     {
+        if (isMeltAnimating) return;
+
         if (iceOverlay != null)
         {
-            // Bật/tắt trực tiếp object con
-            iceOverlay.SetActive(isFrozen);
+            if (iceOverlay.activeSelf != isFrozen)
+            {
+                iceOverlay.SetActive(isFrozen);
+            }
         }
 
-        // Đảm bảo ArrowBlock có tham chiếu đến FreezableBlock
         if (arrowBlock != null && arrowBlock.freezableBlock != this)
         {
             arrowBlock.freezableBlock = this;
         }
+
+        UpdateCountDisplay();
     }
 
     /// <summary>
-    /// Bật/tắt trạng thái đóng băng
+    /// Cập nhật hình ảnh Sprite số Pixel Art
     /// </summary>
-    public void SetFrozen(bool frozen)
+    public void UpdateCountDisplay()
+    {
+        bool shouldShow = isFrozen && freezeCount > 0;
+
+        if (shouldShow)
+        {
+            if (numberRenderer != null)
+            {
+                if (!numberRenderer.gameObject.activeSelf)
+                    numberRenderer.gameObject.SetActive(true);
+
+                if (freezeCount < 10)
+                {
+                    // 1 chữ số: căn chính giữa
+                    numberRenderer.transform.localPosition = new Vector3(0, 0, -0.1f);
+                    numberRenderer.sprite = PixelNumberSprites.GetSprite(freezeCount);
+
+                    if (numberRendererTens != null && numberRendererTens.gameObject.activeSelf)
+                    {
+                        numberRendererTens.gameObject.SetActive(false);
+                    }
+                }
+                else
+                {
+                    // 2 chữ số: hàng chục bên trái, hàng đơn vị bên phải
+                    EnsureNumberDisplay();
+
+                    if (numberRendererTens != null)
+                    {
+                        if (!numberRendererTens.gameObject.activeSelf)
+                            numberRendererTens.gameObject.SetActive(true);
+
+                        numberRendererTens.transform.localPosition = new Vector3(-0.16f, 0, -0.1f);
+                        numberRendererTens.sprite = PixelNumberSprites.GetSprite(freezeCount / 10);
+                    }
+
+                    numberRenderer.transform.localPosition = new Vector3(0.16f, 0, -0.1f);
+                    numberRenderer.sprite = PixelNumberSprites.GetSprite(freezeCount % 10);
+                }
+            }
+        }
+        else
+        {
+            if (numberRenderer != null && numberRenderer.gameObject.activeSelf)
+            {
+                numberRenderer.gameObject.SetActive(false);
+            }
+            if (numberRendererTens != null && numberRendererTens.gameObject.activeSelf)
+            {
+                numberRendererTens.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Bật/tắt trạng thái đóng băng kèm số đếm
+    /// </summary>
+    public void SetFrozen(bool frozen, int count = -1)
     {
         isFrozen = frozen;
+        if (count >= 0)
+        {
+            freezeCount = count;
+        }
+        else if (isFrozen && freezeCount <= 0)
+        {
+            freezeCount = 1;
+        }
+
+        isMeltAnimating = false;
         UpdateFreezeState();
     }
 
     /// <summary>
-    /// Làm tan băng (mở khóa di chuyển cho block)
+    /// Giảm số đếm trên khối băng khi có block vào cổng hoặc dùng Booster Remove
+    /// </summary>
+    public void DecreaseFreezeCount(int amount = 1)
+    {
+        if (!isFrozen) return;
+
+        freezeCount -= amount;
+        onFreezeCountChanged?.Invoke(freezeCount);
+
+        if (freezeCount <= 0)
+        {
+            freezeCount = 0;
+            UpdateCountDisplay();
+            BreakIce();
+        }
+        else
+        {
+            UpdateCountDisplay();
+            if (gameObject.activeInHierarchy)
+            {
+                StartCoroutine(PlayHitRoutine());
+            }
+        }
+    }
+
+    /// <summary>
+    /// Phá băng hoàn toàn: khôi phục di chuyển cho block và kích hoạt hiệu ứng tan biến
+    /// </summary>
+    public void BreakIce()
+    {
+        isFrozen = false; // Ngay lập tức mở khóa di chuyển cho ArrowBlock
+
+        onIceBroken?.Invoke();
+
+        if (gameObject.activeInHierarchy)
+        {
+            if (currentMeltRoutine != null) StopCoroutine(currentMeltRoutine);
+            currentMeltRoutine = StartCoroutine(MeltIceRoutine());
+        }
+        else
+        {
+            if (iceOverlay != null) iceOverlay.SetActive(false);
+            if (numberRenderer != null) numberRenderer.gameObject.SetActive(false);
+            if (numberRendererTens != null) numberRendererTens.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// Hiệu ứng rung nảy số pixel khi bị trừ 1 số
+    /// </summary>
+    private IEnumerator PlayHitRoutine()
+    {
+        Transform t1 = (numberRenderer != null) ? numberRenderer.transform : null;
+        Transform t2 = (numberRendererTens != null) ? numberRendererTens.transform : null;
+
+        Vector3 scalePunch = Vector3.one * 1.4f;
+        if (t1 != null) t1.localScale = scalePunch;
+        if (t2 != null) t2.localScale = scalePunch;
+
+        float elapsed = 0f;
+        float duration = 0.12f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            if (t1 != null) t1.localScale = Vector3.Lerp(scalePunch, Vector3.one, t);
+            if (t2 != null) t2.localScale = Vector3.Lerp(scalePunch, Vector3.one, t);
+            yield return null;
+        }
+
+        if (t1 != null) t1.localScale = Vector3.one;
+        if (t2 != null) t2.localScale = Vector3.one;
+    }
+
+    /// <summary>
+    /// Hiệu ứng băng tan biến: thu nhỏ và mờ dần lớp băng trước khi biến mất
+    /// </summary>
+    private IEnumerator MeltIceRoutine()
+    {
+        isMeltAnimating = true;
+
+        if (numberRenderer != null) numberRenderer.gameObject.SetActive(false);
+        if (numberRendererTens != null) numberRendererTens.gameObject.SetActive(false);
+
+        if (iceOverlay != null)
+        {
+            Transform tr = iceOverlay.transform;
+            Vector3 origScale = tr.localScale;
+            SpriteRenderer sr = iceOverlay.GetComponent<SpriteRenderer>();
+            Color origColor = (sr != null) ? sr.color : Color.white;
+
+            float duration = 0.35f;
+            float elapsed = 0f;
+
+            Vector3 basePos = tr.localPosition;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+
+                // Rung nhẹ
+                float shakeOffset = (1f - t) * 0.05f * Mathf.Sin(elapsed * 50f);
+                tr.localPosition = basePos + new Vector3(shakeOffset, 0, 0);
+
+                // Thu nhỏ dần về 0
+                tr.localScale = Vector3.Lerp(origScale, Vector3.zero, t);
+
+                // Mờ dần alpha
+                if (sr != null)
+                {
+                    sr.color = new Color(origColor.r, origColor.g, origColor.b, Mathf.Lerp(origColor.a, 0f, t));
+                }
+
+                yield return null;
+            }
+
+            // Kết thúc hiệu ứng: tắt overlay và phục hồi scale/color ban đầu
+            iceOverlay.SetActive(false);
+            tr.localPosition = basePos;
+            tr.localScale = origScale;
+            if (sr != null) sr.color = origColor;
+        }
+
+        isMeltAnimating = false;
+        Debug.Log($"<color=cyan>[FreezableBlock]</color> Băng trên khối '{name}' đã tan biến hoàn toàn! Chức năng di chuyển của block đã được khôi phục.");
+    }
+
+    /// <summary>
+    /// Hàm thông báo toàn cục: Gọi khi có bất kỳ khối block nào đi qua cổng thoát
+    /// </summary>
+    public static void OnBlockEnteredGate()
+    {
+#if UNITY_2023_1_OR_NEWER
+        FreezableBlock[] blocks = Object.FindObjectsByType<FreezableBlock>(FindObjectsSortMode.None);
+#else
+        FreezableBlock[] blocks = Object.FindObjectsOfType<FreezableBlock>();
+#endif
+        if (blocks == null || blocks.Length == 0) return;
+
+        int affectedCount = 0;
+        foreach (var b in blocks)
+        {
+            if (b != null && b.gameObject.activeInHierarchy && b.isFrozen && b.freezeCount > 0)
+            {
+                b.DecreaseFreezeCount(1);
+                affectedCount++;
+            }
+        }
+
+        if (affectedCount > 0)
+        {
+            Debug.Log($"<color=cyan>[FreezableBlock]</color> Có block đi qua cổng -> Đã giảm 1 số trên {affectedCount} khối băng trong màn chơi.");
+        }
+    }
+
+    /// <summary>
+    /// Làm tan băng ngay lập tức từ code
     /// </summary>
     public void Unfreeze()
     {
-        SetFrozen(false);
+        freezeCount = 0;
+        BreakIce();
     }
 
-    // Xử lý click nếu FreezableBlock được đặt ở object con khác với ArrowBlock
+    // Chuyển tiếp click nếu FreezableBlock hoặc collider con nhận tương tác chuột
     public void OnPointerDown(PointerEventData eventData)
     {
+        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
+        {
+            BlockItem item = GetComponentInParent<BlockItem>();
+            if (item != null)
+            {
+                BoosterController.Instance.OnBlockClicked(item);
+                return;
+            }
+        }
+
         if (arrowBlock != null && arrowBlock.gameObject != gameObject)
         {
             arrowBlock.OnPointerDown(eventData);
@@ -115,6 +504,16 @@ public class FreezableBlock : MonoBehaviour, IPointerDownHandler
 
     private void OnMouseDown()
     {
+        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
+        {
+            BlockItem item = GetComponentInParent<BlockItem>();
+            if (item != null)
+            {
+                BoosterController.Instance.OnBlockClicked(item);
+                return;
+            }
+        }
+
         if (arrowBlock != null && arrowBlock.gameObject != gameObject)
         {
             arrowBlock.TriggerMove();
@@ -136,22 +535,24 @@ public class FreezableBlockEditor : Editor
         if (EditorGUI.EndChangeCheck())
         {
             targetBlock.AutoConnect();
-            targetBlock.UpdateFreezeState();
             EditorUtility.SetDirty(targetBlock);
+
+            EditorApplication.delayCall -= targetBlock.SafeEditorUpdate;
+            EditorApplication.delayCall += targetBlock.SafeEditorUpdate;
         }
 
         EditorGUILayout.Space(6);
         if (targetBlock.isFrozen)
         {
-            EditorGUILayout.HelpBox("🧊 Block ĐANG BỊ ĐÓNG BĂNG:\n- Hiển thị lớp băng (Ice Overlay).\n- KHÓA tính năng click di chuyển của ArrowBlock.", MessageType.Warning);
+            EditorGUILayout.HelpBox($"🧊 Block ĐANG BỊ ĐÓNG BĂNG (Số Pixel = {targetBlock.freezeCount}):\n- Số đếm hiển thị dạng Pixel Art sắc nét.\n- Không dùng TextMeshPro nên không bị biểu tượng chữ T che.\n- Mỗi khi 1 block vào cổng hoặc dùng Booster Remove, số này sẽ giảm đi 1.\n- Khi về 0, băng sẽ tan biến và mở khóa di chuyển cho block.", MessageType.Warning);
         }
         else
         {
-            EditorGUILayout.HelpBox("✅ Block BÌNH THƯỜNG:\n- Ẩn lớp băng.\n- ArrowBlock có thể click di chuyển bình thường.", MessageType.Info);
+            EditorGUILayout.HelpBox("✅ Block BÌNH THƯỜNG:\n- Không bị đóng băng.\n- ArrowBlock có thể click di chuyển bình thường.", MessageType.Info);
         }
 
-        // Nút toggle nhanh trong Editor
-        EditorGUILayout.Space(2);
+        // Các nút hỗ trợ thao tác nhanh trong Editor
+        EditorGUILayout.Space(4);
         string btnText = targetBlock.isFrozen ? "🔓 Mở Khóa Băng (Unfreeze)" : "🧊 Đóng Băng Khối Này (Freeze)";
         GUI.backgroundColor = targetBlock.isFrozen ? new Color(1f, 0.7f, 0.4f) : new Color(0.4f, 0.8f, 1f);
         if (GUILayout.Button(btnText, GUILayout.Height(30)))
@@ -160,6 +561,16 @@ public class FreezableBlockEditor : Editor
             targetBlock.SetFrozen(!targetBlock.isFrozen);
             EditorUtility.SetDirty(targetBlock);
         }
+
+        if (Application.isPlaying && targetBlock.isFrozen)
+        {
+            GUI.backgroundColor = new Color(0.3f, 1f, 0.6f);
+            if (GUILayout.Button("➖ Test Trừ 1 Số (Giảm Băng)", GUILayout.Height(28)))
+            {
+                targetBlock.DecreaseFreezeCount(1);
+            }
+        }
+
         GUI.backgroundColor = Color.white;
     }
 }
