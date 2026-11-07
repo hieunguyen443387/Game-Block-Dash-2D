@@ -212,11 +212,17 @@ public class MapSaver : MonoBehaviour
             if (item == null || !item.gameObject.activeSelf) continue;
 
             Transform blockTr = item.transform;
-            string typeName = item.GetBlockType();
-            if (string.IsNullOrEmpty(typeName))
+
+            // FIX: Lấy trực tiếp tên GameObject (chính là tên Prefab) làm blockType để phân biệt các block dùng chung script
+            string rawName = blockTr.gameObject.name;
+            rawName = rawName.Replace("(Clone)", "").Trim();
+            int bracketIdx = rawName.IndexOf('(');
+            if (bracketIdx > 0)
             {
-                typeName = blockTr.gameObject.name.Replace("(Clone)", "").Trim();
+                rawName = rawName.Substring(0, bracketIdx).Trim();
             }
+            string typeName = rawName;
+
             Vector2Int gridCoord = WorldToGrid(blockTr.position);
 
             // Kiểm tra trạng thái đóng băng từ FreezableBlock hoặc ArrowBlock
