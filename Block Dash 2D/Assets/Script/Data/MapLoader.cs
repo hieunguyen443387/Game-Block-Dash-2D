@@ -207,6 +207,21 @@ public class MapLoader : MonoBehaviour
                     addedBoom.SetBoom(true, hCount);
                 }
 
+                // === THÊM ĐOẠN CODE NÀY VÀO ĐÂY ===
+                TwoWayBlock twoWay = blockObj.GetComponent<TwoWayBlock>();
+                if (twoWay != null)
+                {
+                    // Cập nhật lại hướng di chuyển dựa trên góc xoay Z được truyền từ file Map
+                    if (Mathf.Abs(b.rotationZ - 0f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Right;
+                    else if (Mathf.Abs(b.rotationZ - 180f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Left;
+                    // Nếu là trục dọc (Vertical), bạn có thể bổ sung thêm điều kiện cho góc 90 hoặc 270 độ nếu cần:
+                    else if (Mathf.Abs(b.rotationZ - 90f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Top; }
+                    else if (Mathf.Abs(b.rotationZ - 270f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Down; }
+
+                    twoWay.InitializeCurrentDirection();
+                    twoWay.ApplyRotationFromDirection();
+                }
+
                 spawnedCount++;
             }
             else

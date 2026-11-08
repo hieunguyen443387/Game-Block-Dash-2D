@@ -119,7 +119,7 @@ public class TwoWayBlock : BlockItem, IPointerDownHandler
         {
             DetectBoardSettings();
         }
-        SyncDirectionFromCurrentRotation();
+        ApplyRotationFromDirection();
     }
 
     public void SyncDirectionFromCurrentRotation()
