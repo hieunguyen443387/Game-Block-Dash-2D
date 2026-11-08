@@ -9,35 +9,22 @@ using UnityEditor;
 public class MapLoader : MonoBehaviour
 {
     [Header("Level Settings")]
-    [Tooltip("Nhập số Level cần tải (Ví dụ: 1 -> tải file Level_1.txt)")]
     public int levelNumber = 1;
 
     [Header("Block Palette (Bảng tra cứu Prefab)")]
-    [Tooltip("Kéo các Prefab tương ứng với tên định danh loại block vào đây")]
     public List<BlockPaletteEntry> blockPalette = new List<BlockPaletteEntry>();
 
     [Header("Board & Surround Prefabs (Tùy chọn)")]
-    [Tooltip("Prefab của từng ô Cell sàn bàn cờ")]
     public GameObject cellPrefab;
-
-    [Tooltip("Prefab của BoardGenerator (tự sinh ra nếu Scene chưa có)")]
     public GameObject boardGeneratorPrefab;
-
-    [Tooltip("Prefab của SideLine (tự sinh ra nếu Scene chưa có)")]
     public GameObject sideLinePrefab;
-
-    [Tooltip("Prefab của SidelineSurround (tự sinh ra nếu Scene chưa có)")]
     public GameObject sidelineSurroundPrefab;
 
     [Header("Exit Gate Prefabs (Tùy chọn)")]
-    [Tooltip("Prefab của ExitGateManager (chứa script ExitGateGenerator) - Khuyên dùng")]
     public GameObject exitGateManagerPrefab;
-
-    [Tooltip("Prefab cổng thoát đơn lẻ ExitGate (dự phòng)")]
     public GameObject exitGatePrefab;
 
     [Header("Blocks Container (Tùy chọn)")]
-    [Tooltip("GameObject cha chứa các block được sinh ra (nếu để trống sẽ dùng chính GameObject này)")]
     public Transform blocksContainer;
 
     [Header("Loaded Info (Chỉ đọc)")]
@@ -76,7 +63,6 @@ public class MapLoader : MonoBehaviour
                 paletteDictionary[NormalizeKey(key)] = entry.prefab;
             }
 
-            // Đăng ký cả tên Prefab để dù blockType lưu theo tên Prefab hay tên Palette đều tìm thấy
             string pName = entry.prefab.name.Trim();
             paletteDictionary[pName] = entry.prefab;
             paletteDictionary[pName.Replace(" ", "")] = entry.prefab;
@@ -88,7 +74,6 @@ public class MapLoader : MonoBehaviour
     {
         if (string.IsNullOrEmpty(blockType)) return null;
 
-        // 1. Thử tra cứu trong Dictionary đã build
         if (paletteDictionary != null)
         {
             if (paletteDictionary.TryGetValue(blockType, out GameObject direct)) return direct;
@@ -97,7 +82,6 @@ public class MapLoader : MonoBehaviour
             if (paletteDictionary.TryGetValue(NormalizeKey(blockType), out GameObject normMatch)) return normMatch;
         }
 
-        // 2. Quét trực tiếp danh sách blockPalette (Fuzzy matching)
         string normTarget = NormalizeKey(blockType);
         foreach (var entry in blockPalette)
         {
@@ -110,7 +94,6 @@ public class MapLoader : MonoBehaviour
         }
 
 #if UNITY_EDITOR
-        // 3. Dự phòng cho Editor: Tự động tìm trong project nếu người dùng chưa kịp gán vào Block Palette
         string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Prefab" });
         foreach (var g in guids)
         {
@@ -119,11 +102,7 @@ public class MapLoader : MonoBehaviour
             if (NormalizeKey(assetName) == normTarget)
             {
                 GameObject found = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (found != null)
-                {
-                    Debug.Log($"[MapLoader] Tự động tìm thấy Prefab '{assetName}' khớp với '{blockType}'!");
-                    return found;
-                }
+                if (found != null) return found;
             }
         }
 #endif
@@ -137,7 +116,6 @@ public class MapLoader : MonoBehaviour
         string targetMapName = "Level_" + levelNumber;
         BuildPaletteDictionary();
 
-        // 1. Đọc nội dung file map .txt từ thư mục Resources/Maps
         TextAsset textAsset = Resources.Load<TextAsset>("Maps/" + targetMapName);
         if (textAsset == null)
         {
@@ -145,7 +123,6 @@ public class MapLoader : MonoBehaviour
             return;
         }
 
-        // 2. Giải mã JSON thành MapData
         MapData mapData = JsonUtility.FromJson<MapData>(textAsset.text);
         if (mapData == null)
         {
@@ -156,18 +133,12 @@ public class MapLoader : MonoBehaviour
         loadedRows = mapData.rows;
         loadedColumns = mapData.columns;
 
-        // 3. Tự động tái tạo lại Board và Surround theo thông số trong file map
         RebuildBoardAndSurround(mapData);
-
-        // 4. Xóa block cũ trước khi load map mới
         ClearMap();
 
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
-
-        // 5. Sinh lại Cổng thoát (ExitGate)
         SpawnExitGates(mapData, container);
 
-        // 6. Sinh lại toàn bộ các Block
         int spawnedCount = 0;
         foreach (var b in mapData.blocks)
         {
@@ -188,7 +159,7 @@ public class MapLoader : MonoBehaviour
                     item.gridY = b.gridY;
                 }
 
-                // Cập nhật trạng thái đóng băng và số đếm từ dữ liệu đã lưu
+                // 1. Khôi phục trạng thái đóng băng (Freeze)
                 FreezableBlock freezable = blockObj.GetComponent<FreezableBlock>();
                 int fCount = (b.freezeCount > 0) ? b.freezeCount : (b.isFrozen ? 1 : 0);
                 if (freezable != null)
@@ -198,10 +169,24 @@ public class MapLoader : MonoBehaviour
                 }
                 else if (b.isFrozen)
                 {
-                    // Nếu prefab chưa có component FreezableBlock nhưng dữ liệu map lưu là đóng băng
                     FreezableBlock addedFreezable = blockObj.AddComponent<FreezableBlock>();
                     addedFreezable.freezeCount = fCount;
                     addedFreezable.SetFrozen(true, fCount);
+                }
+
+                // 2. Khôi phục trạng thái Boom (HitCountdownBoomBlock)
+                HitCountdownBoomBlock boomBlock = blockObj.GetComponent<HitCountdownBoomBlock>();
+                int hCount = (b.hitCount > 0) ? b.hitCount : (b.hasBoom ? 3 : 0);
+                if (boomBlock != null)
+                {
+                    boomBlock.hitCount = hCount;
+                    boomBlock.SetBoom(b.hasBoom, hCount);
+                }
+                else if (b.hasBoom)
+                {
+                    HitCountdownBoomBlock addedBoom = blockObj.AddComponent<HitCountdownBoomBlock>();
+                    addedBoom.hitCount = hCount;
+                    addedBoom.SetBoom(true, hCount);
                 }
 
                 spawnedCount++;
@@ -219,7 +204,6 @@ public class MapLoader : MonoBehaviour
     {
         Vector2 startPos = new Vector2(mapData.startPosX, mapData.startPosY);
 
-        // 1. Xử lý Board (Sàn bàn cờ & các ô Cell)
 #if UNITY_2023_1_OR_NEWER
         BoardGenerator boardGen = FindFirstObjectByType<BoardGenerator>();
         Board board = FindFirstObjectByType<Board>();
@@ -235,11 +219,6 @@ public class MapLoader : MonoBehaviour
                 obj.name = "BoardGenerator";
                 boardGen = obj.GetComponent<BoardGenerator>();
             }
-            else if (cellPrefab != null)
-            {
-                GameObject obj = new GameObject("BoardGenerator");
-                boardGen = obj.AddComponent<BoardGenerator>();
-            }
         }
 
         if (boardGen != null)
@@ -250,13 +229,8 @@ public class MapLoader : MonoBehaviour
             boardGen.spacingPixels = mapData.spacingPixels;
             boardGen.pixelsPerUnit = mapData.pixelsPerUnit;
             boardGen.startPosition = startPos;
-            if (cellPrefab != null)
-            {
-                boardGen.cellPrefab = cellPrefab;
-            }
-
+            if (cellPrefab != null) boardGen.cellPrefab = cellPrefab;
             boardGen.GenerateBoard(mapData.boardCells);
-            Debug.Log("[MapLoader] Đã vẽ lại Board (Cell sàn) thành công!");
         }
         else if (board != null)
         {
@@ -266,54 +240,39 @@ public class MapLoader : MonoBehaviour
             board.spacingPixels = mapData.spacingPixels;
             board.pixelsPerUnit = mapData.pixelsPerUnit;
             board.startPosition = startPos;
-            if (cellPrefab != null)
-            {
-                board.cellPrefab = cellPrefab;
-            }
-
+            if (cellPrefab != null) board.cellPrefab = cellPrefab;
             board.GenerateBoard();
-            Debug.Log("[MapLoader] Đã vẽ lại Board thành công!");
         }
 
-        // 2. Xử lý SideLine (Viền bàn cờ)
 #if UNITY_2023_1_OR_NEWER
         SideLine sideline = FindFirstObjectByType<SideLine>();
 #else
         SideLine sideline = FindObjectOfType<SideLine>();
 #endif
-        if (sideline == null)
+        if (sideline == null && sideLinePrefab != null)
         {
-            if (sideLinePrefab != null)
+            SideLine compOnPrefab = sideLinePrefab.GetComponent<SideLine>();
+            if (compOnPrefab != null)
             {
-                SideLine compOnPrefab = sideLinePrefab.GetComponent<SideLine>();
-                if (compOnPrefab != null)
-                {
-                    GameObject obj = Instantiate(sideLinePrefab, Vector3.zero, Quaternion.identity);
-                    obj.name = "SideLine";
-                    sideline = obj.GetComponent<SideLine>();
-                }
-                else
-                {
-                    // Người dùng kéo trực tiếp viên gạch viền (Tile) vào ô sideLinePrefab
-                    GameObject obj = new GameObject("SideLine");
-                    sideline = obj.AddComponent<SideLine>();
-                    sideline.borderPrefab = sideLinePrefab;
-                    sideline.cornerPrefab = sideLinePrefab;
-                }
+                GameObject obj = Instantiate(sideLinePrefab, Vector3.zero, Quaternion.identity);
+                obj.name = "SideLine";
+                sideline = obj.GetComponent<SideLine>();
+            }
+            else
+            {
+                GameObject obj = new GameObject("SideLine");
+                sideline = obj.AddComponent<SideLine>();
+                sideline.borderPrefab = sideLinePrefab;
+                sideline.cornerPrefab = sideLinePrefab;
             }
         }
 
         if (sideline != null)
         {
-            // Tự động gán borderPrefab nếu người dùng kéo Tile Prefab vào MapLoader
-            if (sideLinePrefab != null)
+            if (sideLinePrefab != null && sideLinePrefab.GetComponent<SideLine>() == null)
             {
-                SideLine compOnPrefab = sideLinePrefab.GetComponent<SideLine>();
-                if (compOnPrefab == null)
-                {
-                    sideline.borderPrefab = sideLinePrefab;
-                    if (sideline.cornerPrefab == null) sideline.cornerPrefab = sideLinePrefab;
-                }
+                sideline.borderPrefab = sideLinePrefab;
+                if (sideline.cornerPrefab == null) sideline.cornerPrefab = sideLinePrefab;
             }
 
             sideline.rows = mapData.rows;
@@ -323,56 +282,41 @@ public class MapLoader : MonoBehaviour
             sideline.pixelsPerUnit = mapData.pixelsPerUnit;
             sideline.startPosition = startPos;
             
-            // Gán thêm thông số viền đã lưu trong file map
-            if (mapData.sidelineThickness > 0)
-                sideline.borderThickness = mapData.sidelineThickness;
-            if (mapData.sidelineSizePixels > 0)
-                sideline.borderSizePixels = mapData.sidelineSizePixels;
+            if (mapData.sidelineThickness > 0) sideline.borderThickness = mapData.sidelineThickness;
+            if (mapData.sidelineSizePixels > 0) sideline.borderSizePixels = mapData.sidelineSizePixels;
             
-            // Gọi lệnh vẽ viền bàn cờ
             sideline.GenerateBorder(); 
-            Debug.Log("[MapLoader] Đã vẽ lại SideLine (Border) thành công!");
         }
 
-        // 3. Xử lý SidelineSurround (Viền ngoài cùng)
 #if UNITY_2023_1_OR_NEWER
         SidelineSurround surround = FindFirstObjectByType<SidelineSurround>();
 #else
         SidelineSurround surround = FindObjectOfType<SidelineSurround>();
 #endif
-        if (surround == null)
+        if (surround == null && sidelineSurroundPrefab != null)
         {
-            if (sidelineSurroundPrefab != null)
+            SidelineSurround compOnPrefab = sidelineSurroundPrefab.GetComponent<SidelineSurround>();
+            if (compOnPrefab != null)
             {
-                SidelineSurround compOnPrefab = sidelineSurroundPrefab.GetComponent<SidelineSurround>();
-                if (compOnPrefab != null)
-                {
-                    GameObject obj = Instantiate(sidelineSurroundPrefab, Vector3.zero, Quaternion.identity);
-                    obj.name = "SidelineSurround";
-                    surround = obj.GetComponent<SidelineSurround>();
-                }
-                else
-                {
-                    // Người dùng kéo trực tiếp viên gạch viền ngoài vào ô sidelineSurroundPrefab
-                    GameObject obj = new GameObject("SidelineSurround");
-                    surround = obj.AddComponent<SidelineSurround>();
-                    surround.surroundPrefab = sidelineSurroundPrefab;
-                    surround.cornerPrefab = sidelineSurroundPrefab;
-                }
+                GameObject obj = Instantiate(sidelineSurroundPrefab, Vector3.zero, Quaternion.identity);
+                obj.name = "SidelineSurround";
+                surround = obj.GetComponent<SidelineSurround>();
+            }
+            else
+            {
+                GameObject obj = new GameObject("SidelineSurround");
+                surround = obj.AddComponent<SidelineSurround>();
+                surround.surroundPrefab = sidelineSurroundPrefab;
+                surround.cornerPrefab = sidelineSurroundPrefab;
             }
         }
 
         if (surround != null)
         {
-            // Tự động gán surroundPrefab nếu người dùng kéo Tile Prefab vào MapLoader
-            if (sidelineSurroundPrefab != null)
+            if (sidelineSurroundPrefab != null && sidelineSurroundPrefab.GetComponent<SidelineSurround>() == null)
             {
-                SidelineSurround compOnPrefab = sidelineSurroundPrefab.GetComponent<SidelineSurround>();
-                if (compOnPrefab == null)
-                {
-                    surround.surroundPrefab = sidelineSurroundPrefab;
-                    if (surround.cornerPrefab == null) surround.cornerPrefab = sidelineSurroundPrefab;
-                }
+                surround.surroundPrefab = sidelineSurroundPrefab;
+                if (surround.cornerPrefab == null) surround.cornerPrefab = sidelineSurroundPrefab;
             }
 
             surround.boardRows = mapData.rows;
@@ -382,22 +326,16 @@ public class MapLoader : MonoBehaviour
             surround.pixelsPerUnit = mapData.pixelsPerUnit;
             surround.startPosition = startPos;
 
-            if (mapData.sidelineThickness > 0)
-                surround.sidelineThickness = mapData.sidelineThickness;
-            if (mapData.sidelineSizePixels > 0)
-                surround.sidelineSizePixels = mapData.sidelineSizePixels;
+            if (mapData.sidelineThickness > 0) surround.sidelineThickness = mapData.sidelineThickness;
+            if (mapData.sidelineSizePixels > 0) surround.sidelineSizePixels = mapData.sidelineSizePixels;
 
             surround.autoDetectFromScene = true;
             surround.AutoDetectSettings();
             
-            // Gán thêm thông số viền ngoài đã lưu trong file map
-            if (mapData.surroundThickness > 0)
-                surround.surroundThickness = mapData.surroundThickness;
+            if (mapData.surroundThickness > 0) surround.surroundThickness = mapData.surroundThickness;
             surround.surroundMode = (SidelineSurroundMode)mapData.surroundMode;
             
-            // Gọi lệnh vẽ viền ngoài Surround
             surround.GenerateSurround(); 
-            Debug.Log("[MapLoader] Đã vẽ lại SidelineSurround thành công!");
         }
     }
     
@@ -410,7 +348,6 @@ public class MapLoader : MonoBehaviour
 #else
         ExitGateGenerator gateGen = FindObjectOfType<ExitGateGenerator>();
 #endif
-        // Nếu trong Scene chưa có ExitGateManager mà có gán Prefab ở MapLoader thì tự sinh ra
         if (gateGen == null && exitGateManagerPrefab != null)
         {
             GameObject managerObj = Instantiate(exitGateManagerPrefab, Vector3.zero, Quaternion.identity);
@@ -420,7 +357,6 @@ public class MapLoader : MonoBehaviour
 
         foreach (var gateData in mapData.exitGates)
         {
-            // 1. Ưu tiên tuyệt đối tọa độ thế giới (posX, posY) đã lưu chính xác lúc thiết kế Map
             Vector3 gatePos;
             if (gateData.posX != 0f || gateData.posY != 0f)
             {
@@ -428,7 +364,6 @@ public class MapLoader : MonoBehaviour
             }
             else
             {
-                // Fallback tính toán nếu file map cũ chưa lưu posX, posY
                 float ppu = (mapData.pixelsPerUnit > 0) ? mapData.pixelsPerUnit : 100f;
                 float cellSize = mapData.cellSizePixels / ppu;
                 float sidelineUnitSize = (mapData.sidelineSizePixels > 0 ? mapData.sidelineSizePixels : mapData.cellSizePixels) / ppu;
@@ -445,7 +380,6 @@ public class MapLoader : MonoBehaviour
                 gatePos = new Vector3(startX, startY, 0f);
             }
 
-            // 2. Sinh cổng bằng ExitGateGenerator (ExitGateManager)
             if (gateGen != null)
             {
                 gateGen.rows = mapData.rows;
@@ -463,7 +397,6 @@ public class MapLoader : MonoBehaviour
                 gateGen.positionOffset = new Vector2(gateData.offsetX, gateData.offsetY);
                 gateGen.GenerateExitGate();
 
-                // Đảm bảo vị trí cổng khớp 100% với lúc thiết kế và cập nhật component ExitGate
                 if (gateGen.CurrentGateObject != null)
                 {
                     gateGen.CurrentGateObject.transform.position = gatePos;
@@ -484,19 +417,9 @@ public class MapLoader : MonoBehaviour
             {
                 GameObject gateObj = Instantiate(exitGatePrefab, gatePos, Quaternion.identity, container);
                 gateObj.name = $"Loaded_ExitGate_{gateData.startColumn}";
-                gateObj.transform.position = gatePos;
 
-                // ĐẢM BẢO LUÔN CÓ COMPONENT ExitGate VÀ BoxCollider2D ĐỂ BLOCK TÌM THẤY VÀ CHẠY VÀO
-                ExitGate gateComp = gateObj.GetComponent<ExitGate>();
-                if (gateComp == null)
-                {
-                    gateComp = gateObj.AddComponent<ExitGate>();
-                }
-                BoxCollider2D boxCol = gateObj.GetComponent<BoxCollider2D>();
-                if (boxCol == null)
-                {
-                    boxCol = gateObj.AddComponent<BoxCollider2D>();
-                }
+                ExitGate gateComp = gateObj.GetComponent<ExitGate>() ?? gateObj.AddComponent<ExitGate>();
+                BoxCollider2D boxCol = gateObj.GetComponent<BoxCollider2D>() ?? gateObj.AddComponent<BoxCollider2D>();
                 boxCol.isTrigger = true;
 
                 gateComp.startColumn = gateData.startColumn;
@@ -531,28 +454,7 @@ public class MapLoader : MonoBehaviour
 #else
         ExitGateGenerator gateGen = FindObjectOfType<ExitGateGenerator>();
 #endif
-        if (gateGen != null)
-        {
-            gateGen.ClearExitGate();
-        }
-    }
-
-    private Vector2 GridToWorld(int col, int row, MapData mapData)
-    {
-        float cellSize = mapData.cellSizePixels / mapData.pixelsPerUnit;
-        float spacing = mapData.spacingPixels / mapData.pixelsPerUnit;
-        float step = cellSize + spacing;
-
-        float boardWidth = mapData.columns * cellSize + (mapData.columns - 1) * spacing;
-        float boardHeight = mapData.rows * cellSize + (mapData.rows - 1) * spacing;
-
-        Vector2 offset = new Vector2(
-            -boardWidth / 2f + cellSize / 2f,
-            -boardHeight / 2f + cellSize / 2f
-        );
-
-        Vector2 startPos = new Vector2(mapData.startPosX, mapData.startPosY);
-        return startPos + offset + new Vector2(col * step, row * step);
+        if (gateGen != null) gateGen.ClearExitGate();
     }
 }
 

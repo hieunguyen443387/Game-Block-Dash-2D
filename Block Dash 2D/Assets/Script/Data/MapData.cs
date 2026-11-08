@@ -28,6 +28,12 @@ public class BlockData
 
     [Tooltip("Số đếm trên khối băng (giảm khi có block vào cổng hoặc dùng Booster Remove)")]
     public int freezeCount = 0;
+
+    [Tooltip("Trạng thái gắn boom của block")]
+    public bool hasBoom = false;
+
+    [Tooltip("Số lượt chịu lực của boom (giảm khi bị húc trúng)")]
+    public int hitCount = 3;
 }
 
 [Serializable]
@@ -36,15 +42,13 @@ public class ExitGateData
     public int startColumn = 3;
     public int columnSpan = 2;
     public int exitRow = 12;
-    public string gateDirection = "Up"; // Lưu hướng cổng (Up, Down, Left, Right)
+    public string gateDirection = "Up";
     
-    // Tọa độ thế giới để load chính xác 100% như lúc thiết kế
     public float posX;
     public float posY;
 
-    // Cấu hình từ ExitGateManager (ExitGateGenerator)
     public bool autoCenter = false;
-    public int placement = 0; // GatePlacement enum
+    public int placement = 0;
     public float extraCellsUp = 0f;
     public float offsetX = 0f;
     public float offsetY = 0f;
@@ -79,7 +83,7 @@ public class MapData
 
     [Header("SidelineSurround Settings")]
     public int surroundThickness = 1;
-    public int surroundMode = 0; // 0: TileByPixelSize, 1: MatchCells, 2: ExactSprite
+    public int surroundMode = 0;
 
     public List<BlockData> blocks = new List<BlockData>();
     public List<ExitGateData> exitGates = new List<ExitGateData>();
@@ -88,7 +92,7 @@ public class MapData
 [Serializable]
 public class BlockPaletteEntry
 {
-    [Tooltip("Tên định danh của Block (ví dụ: BlockThuong, Block2Chieu, Gate, Trap...)")]
+    [Tooltip("Tên định danh của Block")]
     public string blockType;
 
     [Tooltip("Prefab tương ứng sẽ được sinh ra khi Load Map")]

@@ -9,7 +9,6 @@ using UnityEditor;
 public class MapSaver : MonoBehaviour
 {
     [Header("Map Level Settings")]
-    [Tooltip("Nhập số Level cần lưu (Ví dụ: 1 -> lưu thành Level_1.txt)")]
     public int levelNumber = 1;
 
     [Header("Board Info (Tự động đồng bộ từ Scene)")]
@@ -31,7 +30,6 @@ public class MapSaver : MonoBehaviour
     {
         string finalMapName = "Level_" + levelNumber;
 
-        // 1. Tự động lấy thông số Board từ BoardGenerator, Board hoặc SideLine
 #if UNITY_2023_1_OR_NEWER
         BoardGenerator boardGen = FindFirstObjectByType<BoardGenerator>();
         Board board = FindFirstObjectByType<Board>();
@@ -84,7 +82,6 @@ public class MapSaver : MonoBehaviour
             surroundMode = (int)surround.surroundMode;
         }
 
-        // 2. Quét danh sách các ô Cell của bàn cờ
         List<CellData> cells = new List<CellData>();
         Transform cellContainer = (boardGen != null) ? boardGen.transform : ((board != null) ? board.transform : null);
         if (cellContainer != null && cellContainer.childCount > 0)
@@ -100,7 +97,6 @@ public class MapSaver : MonoBehaviour
             }
         }
 
-        // Nếu trên Scene chưa sinh các ô Cell con, mặc định lưu đầy đủ hình chữ nhật rows x columns
         if (cells.Count == 0)
         {
             for (int r = 0; r < rows; r++)
@@ -112,7 +108,6 @@ public class MapSaver : MonoBehaviour
             }
         }
 
-        // Tạo khung dữ liệu MapData
         MapData mapData = new MapData
         {
             mapName = finalMapName,
@@ -132,7 +127,6 @@ public class MapSaver : MonoBehaviour
             blocks = new List<BlockData>()
         };
 
-        // 2. Tự động quét ExitGateManager (ExitGateGenerator) hoặc ExitGate trong Scene
 #if UNITY_2023_1_OR_NEWER
         ExitGateGenerator gateGen = FindFirstObjectByType<ExitGateGenerator>();
         ExitGate[] allGates = FindObjectsByType<ExitGate>(FindObjectsSortMode.None);
@@ -157,13 +151,6 @@ public class MapSaver : MonoBehaviour
                     direction = gateComp.gateDirection.ToString();
                     exitRow = gateComp.exitRow;
                 }
-            }
-            else if (allGates != null && allGates.Length > 0 && allGates[0] != null)
-            {
-                gatePosX = allGates[0].transform.position.x;
-                gatePosY = allGates[0].transform.position.y;
-                direction = allGates[0].gateDirection.ToString();
-                exitRow = allGates[0].exitRow;
             }
 
             ExitGateData gData = new ExitGateData
@@ -200,7 +187,6 @@ public class MapSaver : MonoBehaviour
             }
         }
 
-        // 3. Tự động quét toàn bộ các Block đang có trên Scene
 #if UNITY_2023_1_OR_NEWER
         BlockItem[] allBlocksInScene = FindObjectsByType<BlockItem>(FindObjectsSortMode.None);
 #else
@@ -213,7 +199,6 @@ public class MapSaver : MonoBehaviour
 
             Transform blockTr = item.transform;
 
-            // FIX: Lấy trực tiếp tên GameObject (chính là tên Prefab) làm blockType để phân biệt các block dùng chung script
             string rawName = blockTr.gameObject.name;
             rawName = rawName.Replace("(Clone)", "").Trim();
             int bracketIdx = rawName.IndexOf('(');
@@ -225,7 +210,7 @@ public class MapSaver : MonoBehaviour
 
             Vector2Int gridCoord = WorldToGrid(blockTr.position);
 
-            // Kiểm tra trạng thái đóng băng từ FreezableBlock hoặc ArrowBlock
+            // Quét trạng thái đóng băng (Freeze)
             bool isBlockFrozen = false;
             int freezeCount = 0;
             FreezableBlock freezable = item.GetComponent<FreezableBlock>();
@@ -243,6 +228,16 @@ public class MapSaver : MonoBehaviour
                 }
             }
 
+            // Quét trạng thái Boom (HitCountdownBoomBlock)
+            bool hasBoom = false;
+            int hitCount = 3;
+            HitCountdownBoomBlock boom = item.GetComponent<HitCountdownBoomBlock>();
+            if (boom != null)
+            {
+                hasBoom = boom.hasBoom;
+                hitCount = boom.hitCount;
+            }
+
             BlockData bData = new BlockData
             {
                 blockType = typeName,
@@ -252,13 +247,14 @@ public class MapSaver : MonoBehaviour
                 posY = blockTr.position.y,
                 rotationZ = blockTr.eulerAngles.z,
                 isFrozen = isBlockFrozen,
-                freezeCount = freezeCount
+                freezeCount = freezeCount,
+                hasBoom = hasBoom,
+                hitCount = hitCount
             };
 
             mapData.blocks.Add(bData);
         }
 
-        // 4. Lưu ra file .txt vào thư mục Resources/Maps
         string json = JsonUtility.ToJson(mapData, true);
 
         string folderPath = Path.Combine(Application.dataPath, "Resources", "Maps");
@@ -274,7 +270,7 @@ public class MapSaver : MonoBehaviour
         AssetDatabase.Refresh();
 #endif
 
-        Debug.Log($"<color=green>LƯU MAP THÀNH CÔNG!</color> Level {levelNumber} đã lưu: {mapData.blocks.Count} blocks, {mapData.exitGates.Count} cổng thoát vào file: {filePath}");
+        Debug.Log($"<color=green>LƯU MAP THÀNH CÔNG!</color> Level {levelNumber} đã lưu: {mapData.blocks.Count} blocks vào file: {filePath}");
     }
 
     public Vector2 GridToWorld(int col, int row)
