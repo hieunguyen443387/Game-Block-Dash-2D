@@ -9,22 +9,35 @@ using UnityEditor;
 public class MapLoader : MonoBehaviour
 {
     [Header("Level Settings")]
+    [Tooltip("Nhập số Level cần tải (Ví dụ: 1 -> tải file Level_1.txt)")]
     public int levelNumber = 1;
 
     [Header("Block Palette (Bảng tra cứu Prefab)")]
+    [Tooltip("Kéo các Prefab tương ứng với tên định danh loại block vào đây")]
     public List<BlockPaletteEntry> blockPalette = new List<BlockPaletteEntry>();
 
     [Header("Board & Surround Prefabs (Tùy chọn)")]
+    [Tooltip("Prefab của từng ô Cell sàn bàn cờ")]
     public GameObject cellPrefab;
+
+    [Tooltip("Prefab của BoardGenerator (tự sinh ra nếu Scene chưa có)")]
     public GameObject boardGeneratorPrefab;
+
+    [Tooltip("Prefab của SideLine (tự sinh ra nếu Scene chưa có)")]
     public GameObject sideLinePrefab;
+
+    [Tooltip("Prefab của SidelineSurround (tự sinh ra nếu Scene chưa có)")]
     public GameObject sidelineSurroundPrefab;
 
     [Header("Exit Gate Prefabs (Tùy chọn)")]
+    [Tooltip("Prefab của ExitGateManager (chứa script ExitGateGenerator) - Khuyên dùng")]
     public GameObject exitGateManagerPrefab;
+
+    [Tooltip("Prefab cổng thoát đơn lẻ ExitGate (dự phòng)")]
     public GameObject exitGatePrefab;
 
     [Header("Blocks Container (Tùy chọn)")]
+    [Tooltip("GameObject cha chứa các block được sinh ra (nếu để trống sẽ dùng chính GameObject này)")]
     public Transform blocksContainer;
 
     [Header("Loaded Info (Chỉ đọc)")]
@@ -102,7 +115,11 @@ public class MapLoader : MonoBehaviour
             if (NormalizeKey(assetName) == normTarget)
             {
                 GameObject found = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (found != null) return found;
+                if (found != null)
+                {
+                    Debug.Log($"[MapLoader] Tự động tìm thấy Prefab '{assetName}' khớp với '{blockType}'!");
+                    return found;
+                }
             }
         }
 #endif
@@ -133,6 +150,7 @@ public class MapLoader : MonoBehaviour
         loadedRows = mapData.rows;
         loadedColumns = mapData.columns;
 
+        // Tái tạo lại Board, Surround và Dọn dẹp sạch sẽ block cũ lẫn BlockSpawner trước khi load mới
         RebuildBoardAndSurround(mapData);
         ClearMap();
 
@@ -219,6 +237,11 @@ public class MapLoader : MonoBehaviour
                 obj.name = "BoardGenerator";
                 boardGen = obj.GetComponent<BoardGenerator>();
             }
+            else if (cellPrefab != null)
+            {
+                GameObject obj = new GameObject("BoardGenerator");
+                boardGen = obj.AddComponent<BoardGenerator>();
+            }
         }
 
         if (boardGen != null)
@@ -230,6 +253,7 @@ public class MapLoader : MonoBehaviour
             boardGen.pixelsPerUnit = mapData.pixelsPerUnit;
             boardGen.startPosition = startPos;
             if (cellPrefab != null) boardGen.cellPrefab = cellPrefab;
+
             boardGen.GenerateBoard(mapData.boardCells);
         }
         else if (board != null)
@@ -241,6 +265,7 @@ public class MapLoader : MonoBehaviour
             board.pixelsPerUnit = mapData.pixelsPerUnit;
             board.startPosition = startPos;
             if (cellPrefab != null) board.cellPrefab = cellPrefab;
+
             board.GenerateBoard();
         }
 
@@ -436,17 +461,30 @@ public class MapLoader : MonoBehaviour
     [ContextMenu("Clear Map")]
     public void ClearMap()
     {
+        // 1. Xóa các block trong container của MapLoader
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         for (int i = container.childCount - 1; i >= 0; i--)
         {
+            Transform child = container.GetChild(i);
 #if UNITY_EDITOR
             if (!Application.isPlaying)
             {
-                DestroyImmediate(container.GetChild(i).gameObject);
+                Undo.DestroyObjectImmediate(child.gameObject);
                 continue;
             }
 #endif
-            Destroy(container.GetChild(i).gameObject);
+            Destroy(child.gameObject);
+        }
+
+        // 2. Tự động xóa luôn các block đang xếp dang dở của BlockSpawner để tránh trùng lặp
+#if UNITY_2023_1_OR_NEWER
+        BlockSpawner spawner = FindFirstObjectByType<BlockSpawner>();
+#else
+        BlockSpawner spawner = FindObjectOfType<BlockSpawner>();
+#endif
+        if (spawner != null)
+        {
+            spawner.ClearAllBlocks();
         }
 
 #if UNITY_2023_1_OR_NEWER
@@ -454,7 +492,10 @@ public class MapLoader : MonoBehaviour
 #else
         ExitGateGenerator gateGen = FindObjectOfType<ExitGateGenerator>();
 #endif
-        if (gateGen != null) gateGen.ClearExitGate();
+        if (gateGen != null)
+        {
+            gateGen.ClearExitGate();
+        }
     }
 }
 

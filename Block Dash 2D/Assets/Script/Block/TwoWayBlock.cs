@@ -119,7 +119,20 @@ public class TwoWayBlock : BlockItem, IPointerDownHandler
         {
             DetectBoardSettings();
         }
-        ApplyRotationFromDirection();
+        SyncDirectionFromCurrentRotation();
+    }
+
+    public void SyncDirectionFromCurrentRotation()
+    {
+        // Trừ thêm rotationOffset để đọc chính xác góc hướng thực tế
+        float currentZ = transform.eulerAngles.z - rotationOffset;
+        float currentAngle = Mathf.Round(currentZ / 90f) * 90f;
+        currentAngle = (currentAngle % 360f + 360f) % 360f;
+
+        if (Mathf.Abs(currentAngle - 0f) < 5f) currentTwoWayDir = TwoWayDirection.Right;
+        else if (Mathf.Abs(currentAngle - 90f) < 5f) currentTwoWayDir = TwoWayDirection.Up;
+        else if (Mathf.Abs(currentAngle - 180f) < 5f) currentTwoWayDir = TwoWayDirection.Left;
+        else if (Mathf.Abs(currentAngle - 270f) < 5f) currentTwoWayDir = TwoWayDirection.Down;
     }
 
     public void InitializeCurrentDirection()
@@ -347,6 +360,8 @@ public class TwoWayBlock : BlockItem, IPointerDownHandler
     public void TriggerMove()
     {
         if (isMoving) return;
+        SyncDirectionFromCurrentRotation();
+
         StartCoroutine(MoveRoutine());
     }
 
@@ -904,7 +919,8 @@ public class TwoWayBlockEditor : Editor
         }
 
         EditorGUILayout.Space(8);
-        DrawDefaultInspector();
+        
+        // ❌ ĐÃ XÓA BỎ DÒNG DrawDefaultInspector(); Ở ĐÂY ĐỂ TRÁNH BỊ HIỂN THỊ LẶP LẠI PHẦN CẤU HÌNH PHÍA DƯỚI!
     }
 }
 #endif

@@ -399,14 +399,14 @@
     "surroundMode": 0,
     "blocks": [
         {
-            "blockType": "Arrow Block",
-            "gridX": 1,
-            "gridY": 6,
-            "posX": -2.1024930477142336,
-            "posY": 0.44875335693359377,
-            "rotationZ": 0.0,
+            "blockType": "Two Way Block",
+            "gridX": 4,
+            "gridY": 7,
+            "posX": 0.47368454933166506,
+            "posY": 1.9224379062652588,
+            "rotationZ": 90.0,
             "isFrozen": false,
-            "freezeCount": 3,
+            "freezeCount": 0,
             "hasBoom": false,
             "hitCount": 3
         },
@@ -420,6 +420,42 @@
             "isFrozen": false,
             "freezeCount": 3,
             "hasBoom": true,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 9,
+            "posX": 2.448753595352173,
+            "posY": 3.8975071907043459,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": true,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 9,
+            "posX": 0.8975069522857666,
+            "posY": 3.4487533569335939,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 11,
+            "posX": -3.1024930477142336,
+            "posY": 5.448753356933594,
+            "rotationZ": 0.0,
+            "isFrozen": true,
+            "freezeCount": 3,
+            "hasBoom": false,
             "hitCount": 3
         }
     ],

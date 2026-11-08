@@ -22,7 +22,7 @@ public class HitCountdownBoomBlock : MonoBehaviour
     [Tooltip("Object hiển thị hình ảnh/viền Boom phủ lên block")]
     public GameObject boomOverlay;
 
-    [Tooltip("Object chứa hiệu ứng tàn lửa (Gắn script BoomSparkEffect vào đây)")]
+    [Tooltip("Object chứa hiệu ứng tàn lửa")]
     public GameObject sparkEffectObject;
 
     [Tooltip("SpriteRenderer hiển thị số đếm Pixel Art")]
@@ -60,6 +60,20 @@ public class HitCountdownBoomBlock : MonoBehaviour
     {
         AutoConnect();
 
+        // XUNG ĐỘT FIX: Nếu bật Boom thì tự động tắt Đóng Băng để tránh xung đột
+        if (hasBoom)
+        {
+            FreezableBlock freeze = GetComponent<FreezableBlock>();
+            if (freeze != null && freeze.isFrozen)
+            {
+                freeze.isFrozen = false;
+                freeze.UpdateFreezeState();
+#if UNITY_EDITOR
+                EditorUtility.SetDirty(freeze);
+#endif
+            }
+        }
+
 #if UNITY_EDITOR
         if (!Application.isPlaying)
         {
@@ -85,6 +99,8 @@ public class HitCountdownBoomBlock : MonoBehaviour
 
     private void Reset()
     {
+        hasBoom = false; // Mặc định ban đầu là tắt
+        hitCount = 3;
         AutoConnect();
         EnsureNumberDisplay();
         UpdateBoomState();
@@ -241,6 +257,17 @@ public class HitCountdownBoomBlock : MonoBehaviour
     public void SetBoom(bool active, int count = -1)
     {
         hasBoom = active;
+
+        // Nếu bật Boom, tự động tắt Đóng Băng trên cùng object
+        if (hasBoom)
+        {
+            FreezableBlock freeze = GetComponent<FreezableBlock>();
+            if (freeze != null)
+            {
+                freeze.SetFrozen(false);
+            }
+        }
+
         if (count >= 0)
         {
             hitCount = count;
@@ -309,7 +336,6 @@ public class HitCountdownBoomBlock : MonoBehaviour
         if (sparkEffectObject != null) sparkEffectObject.SetActive(false);
 
         onBoomExploded?.Invoke();
-        Debug.Log($"<color=red>[HitCountdownBoomBlock]</color> Khối '{name}' đã về 0 và PHÁT NỔ!", this);
 
         if (boomEffectPrefab != null)
         {
@@ -326,9 +352,6 @@ public class HitCountdownBoomBlock : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Hiệu ứng nổ bung các mảnh tàn lửa màu #FD0505 tản ra xung quanh (giống hiệu ứng băng vỡ của FreezableBlock)
-    /// </summary>
     private IEnumerator BoomExplosionRoutine()
     {
         if (numberRenderer != null) numberRenderer.gameObject.SetActive(false);
@@ -455,6 +478,13 @@ public class HitCountdownBoomBlockEditor : Editor
     {
         HitCountdownBoomBlock targetBlock = (HitCountdownBoomBlock)target;
 
+        // Cảnh báo nếu đang bật cả hai
+        FreezableBlock freeze = targetBlock.GetComponent<FreezableBlock>();
+        if (freeze != null && freeze.isFrozen && targetBlock.hasBoom)
+        {
+            EditorGUILayout.HelpBox("⚠️ CẢNH BÁO: Block đang bị xung đột (vừa bật Đóng Băng vừa bật Boom). Hãy tắt 1 trong 2!", MessageType.Error);
+        }
+
         EditorGUI.BeginChangeCheck();
         DrawDefaultInspector();
 
@@ -470,11 +500,11 @@ public class HitCountdownBoomBlockEditor : Editor
         EditorGUILayout.Space(6);
         if (targetBlock.hasBoom)
         {
-            EditorGUILayout.HelpBox($"💣 Block ĐANG GẮN BOOM (Số đếm = {targetBlock.hitCount}):\n- Hiệu ứng nổ bung tàn lửa màu #FD0505 sẵn sàng.", MessageType.Warning);
+            EditorGUILayout.HelpBox($"💣 Block ĐANG GẮN BOOM (Số đếm = {targetBlock.hitCount})", MessageType.Warning);
         }
         else
         {
-            EditorGUILayout.HelpBox("✅ Block BÌNH THƯỜNG:\n- Không kích hoạt Boom.", MessageType.Info);
+            EditorGUILayout.HelpBox("✅ Block BÌNH THƯỜNG (Không gắn boom)", MessageType.Info);
         }
 
         EditorGUILayout.Space(4);
