@@ -539,14 +539,18 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
 
             foreach (var hit in hits)
             {
-                if (hit != null)
-                {
-                    Debug.Log($"Hit: {hit.name} | Layer: {LayerMask.LayerToName(hit.gameObject.layer)} | Position: {hit.bounds.center}");
-                }
                 if (ignoreTriggers && hit.isTrigger) continue;
                 if (hit != myCollider && hit.transform != transform && !hit.transform.IsChildOf(transform))
                 {
                     isBlocked = true;
+
+                    // Kiểm tra block bị húc trúng có đang bật Boom không
+                    HitCountdownBoomBlock boomBlock = hit.GetComponentInParent<HitCountdownBoomBlock>();
+                    if (boomBlock != null && boomBlock.hasBoom)
+                    {
+                        boomBlock.TakeHit(1);
+                    }
+
                     break;
                 }
             }

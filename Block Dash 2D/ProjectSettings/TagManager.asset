@@ -56,5 +56,8 @@ TagManager:
   - name: Gate
     uniqueID: 243788185
     locked: 0
+  - name: Bomb
+    uniqueID: 2839403049
+    locked: 0
   m_RenderingLayers:
   - Default
