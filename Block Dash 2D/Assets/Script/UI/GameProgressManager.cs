@@ -1,20 +1,27 @@
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class GameProgressManager : MonoBehaviour
 {
     [Header("1. Giao diện (UI Panels)")]
     public GameObject mainMenuPanel;
     public GameObject inGamePanel;
+    public GameObject winPanel;
 
-    [Header("2. UI Elements (Số Level Pixel)")]
-    [Tooltip("Kéo object gắn script PixelNumberDisplay vào đây")]
+    [Header("2. UI Elements (Số Level & Chiến thắng)")]
     public PixelNumberDisplay levelNumberDisplay;
+    public TextMeshProUGUI winLevelText;
 
-    [Header("3. Tham chiếu hệ thống")]
+    [Header("3. Tham chiếu hệ thống & Container chứa Block")]
     public MapLoader mapLoader;
+    
+    [Tooltip("Kéo object BlocksContainer độc lập bên ngoài vào đây")]
+    public Transform blocksContainer; 
 
     private GameSessionData currentSession;
+    private bool isPlaying = false;
+    private bool hasSpawnedBlocks = false; // Khai báo biến này để hết lỗi CS0103
 
     private void Start()
     {
@@ -28,7 +35,6 @@ public class GameProgressManager : MonoBehaviour
 
         UpdateLevelButtonUI();
 
-        // THÊM DÒNG NÀY ĐỂ ÉP SỐ HIỂN THỊ CHUẨN XÁC KHI VÀO GAME
         if (levelNumberDisplay != null)
         {
             levelNumberDisplay.previewLevel = currentSession.currentLevel;
@@ -37,11 +43,20 @@ public class GameProgressManager : MonoBehaviour
 
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
+        if (winPanel != null) winPanel.SetActive(false);
+        isPlaying = false;
+        hasSpawnedBlocks = false;
     }
 
-    /// <summary>
-    /// Cập nhật số level hiển thị trên nút bằng PixelNumberDisplay
-    /// </summary>
+    private void Update()
+    {
+        // Liên tục kiểm tra điều kiện chiến thắng trong khi đang chơi game
+        if (isPlaying)
+        {
+            CheckWinCondition();
+        }
+    }
+
     private void UpdateLevelButtonUI()
     {
         if (levelNumberDisplay != null)
@@ -54,6 +69,7 @@ public class GameProgressManager : MonoBehaviour
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (inGamePanel != null) inGamePanel.SetActive(true);
+        if (winPanel != null) winPanel.SetActive(false);
 
         currentSession = GameDataService.LoadSession();
 
@@ -69,16 +85,63 @@ public class GameProgressManager : MonoBehaviour
                 mapLoader.LoadLevel();
             }
         }
+
+        isPlaying = true;
+        hasSpawnedBlocks = false;
+    }
+
+    /// <summary>
+    /// Kiểm tra xem trên BlocksContainer độc lập còn block nào không. Nếu hết sạch -> Thắng!
+    /// </summary>
+    private void CheckWinCondition()
+    {
+        if (blocksContainer == null) 
+        {
+            Debug.LogWarning(">>> BlocksContainer đang bị NULL trên Inspector của GameProgressManager!");
+            return;
+        }
+
+        int remainingBlocks = 0;
+        int totalCount = 0;
+
+        foreach (Transform child in blocksContainer)
+        {
+            if (child != null && child.gameObject.activeSelf)
+            {
+                BlockItem item = child.GetComponent<BlockItem>();
+                if (item != null)
+                {
+                    remainingBlocks++;
+                }
+                totalCount++;
+            }
+        }
+
+        // In ra Console để theo dõi liên tục
+        Debug.Log($"[CheckWin] Tổng số con trong container: {totalCount} | Số block còn lại: {remainingBlocks} | isPlaying: {isPlaying}");
+
+        if (totalCount > 0)
+        {
+            hasSpawnedBlocks = true;
+        }
+
+        // Nếu đã từng có block và bây giờ số block về 0 -> Thắng!
+        if (hasSpawnedBlocks && remainingBlocks == 0)
+        {
+            Debug.Log(">>> ĐÃ ĐẠT ĐIỀU KIỆN CHIẾN THẮNG! BẬT WINPANEL NGAY LẬP TỨC.");
+            isPlaying = false;
+            hasSpawnedBlocks = false;
+            TriggerWinLevel();
+        }
     }
 
     public void SaveCurrentSession()
     {
-        if (mapLoader == null || mapLoader.blocksContainer == null) return;
+        if (blocksContainer == null) return;
 
         List<SavedBlockState> blocksToSave = new List<SavedBlockState>();
-        Transform container = mapLoader.blocksContainer;
 
-        foreach (Transform child in container)
+        foreach (Transform child in blocksContainer)
         {
             BlockItem item = child.GetComponent<BlockItem>();
             if (item != null)
@@ -120,10 +183,10 @@ public class GameProgressManager : MonoBehaviour
 
         mapLoader.LoadBoardAndGatesOnly(currentSession.currentLevel);
 
-        if (mapLoader.blocksContainer != null)
-        {
-            Transform container = mapLoader.blocksContainer;
+        Transform targetContainer = blocksContainer != null ? blocksContainer : mapLoader.blocksContainer;
 
+        if (targetContainer != null)
+        {
             foreach (var b in currentSession.savedBlocks)
             {
                 GameObject prefab = mapLoader.GetPrefabFromPalette(b.blockType);
@@ -132,7 +195,7 @@ public class GameProgressManager : MonoBehaviour
                     Vector2 spawnPos = new Vector2(b.posX, b.posY);
                     Quaternion rotation = Quaternion.Euler(0, 0, b.rotationZ);
 
-                    GameObject blockObj = Instantiate(prefab, spawnPos, rotation, container);
+                    GameObject blockObj = Instantiate(prefab, spawnPos, rotation, targetContainer);
                     blockObj.name = $"{b.blockType}_{b.gridX}_{b.gridY}";
 
                     BlockItem item = blockObj.GetComponent<BlockItem>();
@@ -173,7 +236,21 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-    public void CompleteCurrentLevel()
+    public void TriggerWinLevel()
+    {
+        if (inGamePanel != null) inGamePanel.SetActive(false);
+
+        GameDataService.ClearActiveSession(currentSession.currentLevel + 1);
+
+        if (winLevelText != null)
+        {
+            winLevelText.text = $"Hoàn thành cấp độ {currentSession.currentLevel}!";
+        }
+
+        if (winPanel != null) winPanel.SetActive(true);
+    }
+
+    public void OnClickNextLevel()
     {
         int nextLevel = currentSession.currentLevel + 1;
         GameDataService.ClearActiveSession(nextLevel);
@@ -181,13 +258,52 @@ public class GameProgressManager : MonoBehaviour
         currentSession = GameDataService.LoadSession();
         UpdateLevelButtonUI();
 
+        if (levelNumberDisplay != null)
+        {
+            levelNumberDisplay.previewLevel = currentSession.currentLevel;
+            levelNumberDisplay.UpdateEditorDisplay();
+        }
+
+        if (winPanel != null) winPanel.SetActive(false);
         if (mapLoader != null)
         {
             mapLoader.ClearMap();
         }
 
+        if (inGamePanel != null) inGamePanel.SetActive(true);
+        if (mapLoader != null)
+        {
+            mapLoader.levelNumber = currentSession.currentLevel;
+            mapLoader.LoadLevel();
+        }
+
+        isPlaying = true;
+        hasSpawnedBlocks = false;
+    }
+
+    public void OnClickHomeFromWin()
+    {
+        int nextLevel = currentSession.currentLevel + 1;
+        GameDataService.ClearActiveSession(nextLevel);
+
+        currentSession = GameDataService.LoadSession();
+        UpdateLevelButtonUI();
+
+        if (levelNumberDisplay != null)
+        {
+            levelNumberDisplay.previewLevel = currentSession.currentLevel;
+            levelNumberDisplay.UpdateEditorDisplay();
+        }
+
+        if (mapLoader != null)
+        {
+            mapLoader.ClearMap();
+        }
+
+        if (winPanel != null) winPanel.SetActive(false);
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
-        if (inGamePanel != null) inGamePanel.SetActive(false);
+        isPlaying = false;
+        hasSpawnedBlocks = false;
     }
 
     public void ShowMainMenu()
@@ -197,6 +313,12 @@ public class GameProgressManager : MonoBehaviour
         currentSession = GameDataService.LoadSession();
         UpdateLevelButtonUI();
 
+        if (levelNumberDisplay != null)
+        {
+            levelNumberDisplay.previewLevel = currentSession.currentLevel;
+            levelNumberDisplay.UpdateEditorDisplay();
+        }
+
         if (mapLoader != null)
         {
             mapLoader.ClearMap();
@@ -204,11 +326,14 @@ public class GameProgressManager : MonoBehaviour
 
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
+        if (winPanel != null) winPanel.SetActive(false);
+        isPlaying = false;
+        hasSpawnedBlocks = false;
     }
 
     private void OnApplicationPause(bool pauseStatus)
     {
-        if (pauseStatus && inGamePanel != null && inGamePanel.activeSelf)
+        if (pauseStatus && inGamePanel != null && inGamePanel.activeSelf && isPlaying)
         {
             SaveCurrentSession();
         }
@@ -216,9 +341,9 @@ public class GameProgressManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        if (inGamePanel != null && inGamePanel.activeSelf)
+        if (inGamePanel != null && inGamePanel.activeSelf && isPlaying)
         {
-            SaveCurrentSession();
+            SaveCurrentSession(); // (lưu ý: đảm bảo không có dấu phẩy thừa ở đây, code chuẩn bên trên đã sạch sẽ)
         }
     }
 }
