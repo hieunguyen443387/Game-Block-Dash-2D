@@ -1,53 +1,63 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GameProgressManager : MonoBehaviour
 {
     [Header("1. Giao diện (UI Panels)")]
-    [Tooltip("Panel màn hình chính (Menu)")]
     public GameObject mainMenuPanel;
-
-    [Tooltip("Panel giao diện khi đang chơi (Nút booster,...)")]
     public GameObject inGamePanel;
 
-    [Header("2. Tham chiếu hệ thống")]
-    [Tooltip("Kéo object gắn script MapLoader vào đây")]
+    [Header("2. UI Elements (Số Level Pixel)")]
+    [Tooltip("Kéo object gắn script PixelNumberDisplay vào đây")]
+    public PixelNumberDisplay levelNumberDisplay;
+
+    [Header("3. Tham chiếu hệ thống")]
     public MapLoader mapLoader;
 
     private GameSessionData currentSession;
 
     private void Start()
     {
-        // 1. Gọi dữ liệu từ file Data độc lập (GameDataService)
         currentSession = GameDataService.LoadSession();
 
-        // 2. Đồng bộ số level hiện tại sang MapLoader giống như ý bạn muốn
         if (mapLoader != null)
         {
             mapLoader.levelNumber = currentSession.currentLevel;
-            
-            // Xóa sạch bàn cờ cũ lúc mới mở game để hiển thị trạng thái sạch sẽ
             mapLoader.ClearMap();
         }
 
-        // 3. Bật Menu lên, tắt UI chơi game đi
+        UpdateLevelButtonUI();
+
+        // THÊM DÒNG NÀY ĐỂ ÉP SỐ HIỂN THỊ CHUẨN XÁC KHI VÀO GAME
+        if (levelNumberDisplay != null)
+        {
+            levelNumberDisplay.previewLevel = currentSession.currentLevel;
+            levelNumberDisplay.UpdateEditorDisplay();
+        }
+
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
     }
 
     /// <summary>
-    /// Gắn hàm này vào nút bấm Play/LEVEL ngoài Main Menu
+    /// Cập nhật số level hiển thị trên nút bằng PixelNumberDisplay
     /// </summary>
+    private void UpdateLevelButtonUI()
+    {
+        if (levelNumberDisplay != null)
+        {
+            levelNumberDisplay.SetNumber(currentSession.currentLevel);
+        }
+    }
+
     public void OnClickPlay()
     {
-        // 1. Tắt Menu, bật UI chơi game
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (inGamePanel != null) inGamePanel.SetActive(true);
 
-        // 2. Tải lại dữ liệu phiên mới nhất từ Service
         currentSession = GameDataService.LoadSession();
 
-        // 3. Kiểm tra nếu có ván chơi dở -> Khôi phục, ngược lại -> Gọi MapLoader load chuẩn level từ file .txt
-        if (currentSession.hasActiveSession && currentSession.savedBlocks.Count > 0)
+        if (currentSession.hasActiveSession && currentSession.savedBlocks != null && currentSession.savedBlocks.Count > 0)
         {
             RestoreSavedSession();
         }
@@ -56,19 +66,16 @@ public class GameProgressManager : MonoBehaviour
             if (mapLoader != null)
             {
                 mapLoader.levelNumber = currentSession.currentLevel;
-                mapLoader.LoadLevel(); // MapLoader tự động load đúng level hiện tại từ file Data
+                mapLoader.LoadLevel();
             }
         }
     }
 
-    /// <summary>
-    /// Lưu lại trạng thái ván chơi hiện tại khi thoát giữa chừng
-    /// </summary>
     public void SaveCurrentSession()
     {
         if (mapLoader == null || mapLoader.blocksContainer == null) return;
 
-        System.Collections.Generic.List<SavedBlockState> blocksToSave = new System.Collections.Generic.List<SavedBlockState>();
+        List<SavedBlockState> blocksToSave = new List<SavedBlockState>();
         Transform container = mapLoader.blocksContainer;
 
         foreach (Transform child in container)
@@ -111,17 +118,12 @@ public class GameProgressManager : MonoBehaviour
     {
         if (mapLoader == null) return;
 
-        mapLoader.levelNumber = currentSession.currentLevel;
-        mapLoader.LoadLevel(); 
+        mapLoader.LoadBoardAndGatesOnly(currentSession.currentLevel);
 
         if (mapLoader.blocksContainer != null)
         {
-            foreach (Transform child in mapLoader.blocksContainer)
-            {
-                Destroy(child.gameObject);
-            }
-
             Transform container = mapLoader.blocksContainer;
+
             foreach (var b in currentSession.savedBlocks)
             {
                 GameObject prefab = mapLoader.GetPrefabFromPalette(b.blockType);
@@ -154,6 +156,18 @@ public class GameProgressManager : MonoBehaviour
                         boom.hitCount = b.hitCount;
                         boom.SetBoom(true, b.hitCount);
                     }
+
+                    TwoWayBlock twoWay = blockObj.GetComponent<TwoWayBlock>();
+                    if (twoWay != null)
+                    {
+                        if (Mathf.Abs(b.rotationZ - 0f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Right;
+                        else if (Mathf.Abs(b.rotationZ - 180f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Left;
+                        else if (Mathf.Abs(b.rotationZ - 90f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Top; }
+                        else if (Mathf.Abs(b.rotationZ - 270f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Down; }
+
+                        twoWay.InitializeCurrentDirection();
+                        twoWay.ApplyRotationFromDirection();
+                    }
                 }
             }
         }
@@ -163,12 +177,25 @@ public class GameProgressManager : MonoBehaviour
     {
         int nextLevel = currentSession.currentLevel + 1;
         GameDataService.ClearActiveSession(nextLevel);
-        ShowMainMenu();
+        
+        currentSession = GameDataService.LoadSession();
+        UpdateLevelButtonUI();
+
+        if (mapLoader != null)
+        {
+            mapLoader.ClearMap();
+        }
+
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+        if (inGamePanel != null) inGamePanel.SetActive(false);
     }
 
     public void ShowMainMenu()
     {
         SaveCurrentSession();
+
+        currentSession = GameDataService.LoadSession();
+        UpdateLevelButtonUI();
 
         if (mapLoader != null)
         {

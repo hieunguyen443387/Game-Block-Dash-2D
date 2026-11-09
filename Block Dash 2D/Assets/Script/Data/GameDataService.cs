@@ -54,7 +54,7 @@ public static class GameDataService
     }
 
     /// <summary>
-    /// Xóa ván chơi dở khi hoàn thành màn
+    /// Xóa ván chơi dở khi hoàn thành màn và chuyển sang level tiếp theo
     /// </summary>
     public static void ClearActiveSession(int nextLevel)
     {

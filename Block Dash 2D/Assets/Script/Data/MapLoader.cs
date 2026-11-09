@@ -127,6 +127,39 @@ public class MapLoader : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// Chỉ dựng lại Board, Surround và ExitGates từ file Map (Dùng khi khôi phục Session chơi dở)
+    /// </summary>
+    public void LoadBoardAndGatesOnly(int level)
+    {
+        levelNumber = level;
+        string targetMapName = "Level_" + levelNumber;
+        BuildPaletteDictionary();
+
+        TextAsset textAsset = Resources.Load<TextAsset>("Maps/" + targetMapName);
+        if (textAsset == null)
+        {
+            Debug.LogError($"<color=red>KHÔNG TÌM THẤY MAP:</color> Resources/Maps/{targetMapName}.txt");
+            return;
+        }
+
+        MapData mapData = JsonUtility.FromJson<MapData>(textAsset.text);
+        if (mapData == null)
+        {
+            Debug.LogError("Dữ liệu file map bị lỗi định dạng!");
+            return;
+        }
+
+        loadedRows = mapData.rows;
+        loadedColumns = mapData.columns;
+
+        RebuildBoardAndSurround(mapData);
+        ClearMap();
+
+        Transform container = (blocksContainer != null) ? blocksContainer : transform;
+        SpawnExitGates(mapData, container);
+    }
+
     [ContextMenu("Load Level By Number")]
     public void LoadLevel()
     {
@@ -150,7 +183,6 @@ public class MapLoader : MonoBehaviour
         loadedRows = mapData.rows;
         loadedColumns = mapData.columns;
 
-        // Tái tạo lại Board, Surround và Dọn dẹp sạch sẽ block cũ lẫn BlockSpawner trước khi load mới
         RebuildBoardAndSurround(mapData);
         ClearMap();
 
@@ -177,7 +209,6 @@ public class MapLoader : MonoBehaviour
                     item.gridY = b.gridY;
                 }
 
-                // 1. Khôi phục trạng thái đóng băng (Freeze)
                 FreezableBlock freezable = blockObj.GetComponent<FreezableBlock>();
                 int fCount = (b.freezeCount > 0) ? b.freezeCount : (b.isFrozen ? 1 : 0);
                 if (freezable != null)
@@ -192,7 +223,6 @@ public class MapLoader : MonoBehaviour
                     addedFreezable.SetFrozen(true, fCount);
                 }
 
-                // 2. Khôi phục trạng thái Boom (HitCountdownBoomBlock)
                 HitCountdownBoomBlock boomBlock = blockObj.GetComponent<HitCountdownBoomBlock>();
                 int hCount = (b.hitCount > 0) ? b.hitCount : (b.hasBoom ? 3 : 0);
                 if (boomBlock != null)
@@ -207,14 +237,11 @@ public class MapLoader : MonoBehaviour
                     addedBoom.SetBoom(true, hCount);
                 }
 
-                // === THÊM ĐOẠN CODE NÀY VÀO ĐÂY ===
                 TwoWayBlock twoWay = blockObj.GetComponent<TwoWayBlock>();
                 if (twoWay != null)
                 {
-                    // Cập nhật lại hướng di chuyển dựa trên góc xoay Z được truyền từ file Map
                     if (Mathf.Abs(b.rotationZ - 0f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Right;
                     else if (Mathf.Abs(b.rotationZ - 180f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Left;
-                    // Nếu là trục dọc (Vertical), bạn có thể bổ sung thêm điều kiện cho góc 90 hoặc 270 độ nếu cần:
                     else if (Mathf.Abs(b.rotationZ - 90f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Top; }
                     else if (Mathf.Abs(b.rotationZ - 270f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Down; }
 
@@ -476,7 +503,6 @@ public class MapLoader : MonoBehaviour
     [ContextMenu("Clear Map")]
     public void ClearMap()
     {
-        // 1. Xóa các block trong container của MapLoader
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         for (int i = container.childCount - 1; i >= 0; i--)
         {
@@ -491,7 +517,6 @@ public class MapLoader : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        // 2. Tự động xóa luôn các block đang xếp dang dở của BlockSpawner để tránh trùng lặp
 #if UNITY_2023_1_OR_NEWER
         BlockSpawner spawner = FindFirstObjectByType<BlockSpawner>();
 #else
