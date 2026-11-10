@@ -6,9 +6,6 @@ public static class GameDataService
     private const string PREF_SESSION_KEY = "Game_SavedSessionData";
     private const string PREF_CURRENT_LEVEL = "Game_CurrentLevel";
 
-    /// <summary>
-    /// Lưu lại tiến trình tổng (Level hiện tại) và trạng thái ván chơi dở
-    /// </summary>
     public static void SaveSession(int level, bool hasSession, List<SavedBlockState> blocks)
     {
         GameSessionData session = new GameSessionData
@@ -24,17 +21,12 @@ public static class GameDataService
         PlayerPrefs.Save();
     }
 
-    /// <summary>
-    /// Tải dữ liệu phiên chơi đã lưu
-    /// </summary>
     public static GameSessionData LoadSession()
     {
         GameSessionData session = new GameSessionData();
         
-        // Đọc level hiện tại (mặc định là 1)
         session.currentLevel = PlayerPrefs.GetInt(PREF_CURRENT_LEVEL, 1);
 
-        // Đọc chuỗi JSON ván chơi dở nếu có
         string jsonSession = PlayerPrefs.GetString(PREF_SESSION_KEY, "");
         if (!string.IsNullOrEmpty(jsonSession))
         {
@@ -53,13 +45,28 @@ public static class GameDataService
         return session;
     }
 
-    /// <summary>
-    /// Xóa ván chơi dở khi hoàn thành màn và chuyển sang level tiếp theo
-    /// </summary>
     public static void ClearActiveSession(int nextLevel)
     {
         PlayerPrefs.DeleteKey(PREF_SESSION_KEY);
         PlayerPrefs.SetInt(PREF_CURRENT_LEVEL, nextLevel);
         PlayerPrefs.Save();
+    }
+
+    /// <summary>
+    /// Bắt đầu một level hoàn toàn mới (ví dụ người chơi chọn thẳng level 1), 
+    /// xóa bỏ session cũ để load map mới tinh mà không bị kẹt phiên chơi dở.
+    /// </summary>
+    public static GameSessionData StartNewSessionAtLevel(int targetLevel)
+    {
+        PlayerPrefs.DeleteKey(PREF_SESSION_KEY);
+        PlayerPrefs.SetInt(PREF_CURRENT_LEVEL, targetLevel);
+        PlayerPrefs.Save();
+
+        return new GameSessionData
+        {
+            currentLevel = targetLevel,
+            hasActiveSession = false,
+            savedBlocks = new List<SavedBlockState>()
+        };
     }
 }

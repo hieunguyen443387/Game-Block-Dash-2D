@@ -21,7 +21,7 @@ public class GameProgressManager : MonoBehaviour
 
     private GameSessionData currentSession;
     private bool isPlaying = false;
-    private bool hasSpawnedBlocks = false; // Khai báo biến này để hết lỗi CS0103
+    private bool hasSpawnedBlocks = false;
 
     private void Start()
     {
@@ -65,6 +65,9 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Nút Play thông thường (tiếp tục phiên chơi hiện tại hoặc load level đang lưu)
+    /// </summary>
     public void OnClickPlay()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
@@ -91,15 +94,43 @@ public class GameProgressManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Bắt đầu chơi một level cụ thể được chọn (Ví dụ: Chọn thẳng Level 1 từ menu chọn màn).
+    /// Giúp xóa sạch session cũ và không bị kẹt phiên chơi dở của level khác.
+    /// </summary>
+    public void SelectLevelAndPlay(int targetLevel)
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        if (inGamePanel != null) inGamePanel.SetActive(true);
+        if (winPanel != null) winPanel.SetActive(false);
+
+        // Khởi tạo phiên mới hoàn toàn tại level được chọn, xóa sạch session cũ
+        currentSession = GameDataService.StartNewSessionAtLevel(targetLevel);
+        UpdateLevelButtonUI();
+
+        if (levelNumberDisplay != null)
+        {
+            levelNumberDisplay.previewLevel = currentSession.currentLevel;
+            levelNumberDisplay.UpdateEditorDisplay();
+        }
+
+        // Xóa bàn cờ cũ và load map mới tinh của level được chọn
+        if (mapLoader != null)
+        {
+            mapLoader.ClearMap();
+            mapLoader.levelNumber = currentSession.currentLevel;
+            mapLoader.LoadLevel();
+        }
+
+        isPlaying = true;
+        hasSpawnedBlocks = false;
+    }
+
+    /// <summary>
     /// Kiểm tra xem trên BlocksContainer độc lập còn block nào không. Nếu hết sạch -> Thắng!
     /// </summary>
     private void CheckWinCondition()
     {
-        if (blocksContainer == null) 
-        {
-            Debug.LogWarning(">>> BlocksContainer đang bị NULL trên Inspector của GameProgressManager!");
-            return;
-        }
+        if (blocksContainer == null) return;
 
         int remainingBlocks = 0;
         int totalCount = 0;
@@ -117,9 +148,6 @@ public class GameProgressManager : MonoBehaviour
             }
         }
 
-        // In ra Console để theo dõi liên tục
-        Debug.Log($"[CheckWin] Tổng số con trong container: {totalCount} | Số block còn lại: {remainingBlocks} | isPlaying: {isPlaying}");
-
         if (totalCount > 0)
         {
             hasSpawnedBlocks = true;
@@ -128,7 +156,6 @@ public class GameProgressManager : MonoBehaviour
         // Nếu đã từng có block và bây giờ số block về 0 -> Thắng!
         if (hasSpawnedBlocks && remainingBlocks == 0)
         {
-            Debug.Log(">>> ĐÃ ĐẠT ĐIỀU KIỆN CHIẾN THẮNG! BẬT WINPANEL NGAY LẬP TỨC.");
             isPlaying = false;
             hasSpawnedBlocks = false;
             TriggerWinLevel();
@@ -252,7 +279,18 @@ public class GameProgressManager : MonoBehaviour
 
     public void OnClickNextLevel()
     {
+        // Định nghĩa số level tối đa hiện có của bạn (Ví dụ hiện tại có đến Level 6 là hết)
+        int maxAvailableLevel = 6; // Bạn có thể thay đổi con số này tương ứng với map cao nhất bạn đã tạo
+
         int nextLevel = currentSession.currentLevel + 1;
+
+        // Nếu level tiếp theo vượt quá mức level mới nhất hiện có, ta giữ nguyên ở mức cao nhất (hoặc đưa về 1 tùy ý)
+        if (nextLevel > maxAvailableLevel)
+        {
+            nextLevel = maxAvailableLevel; // Giữ lại ở level mới nhất (ví dụ Level 6)
+            // Hoặc nếu muốn lặp lại vòng tròn từ đầu thì để: nextLevel = 1;
+        }
+
         GameDataService.ClearActiveSession(nextLevel);
         
         currentSession = GameDataService.LoadSession();
@@ -302,6 +340,7 @@ public class GameProgressManager : MonoBehaviour
 
         if (winPanel != null) winPanel.SetActive(false);
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+        
         isPlaying = false;
         hasSpawnedBlocks = false;
     }
@@ -343,7 +382,7 @@ public class GameProgressManager : MonoBehaviour
     {
         if (inGamePanel != null && inGamePanel.activeSelf && isPlaying)
         {
-            SaveCurrentSession(); // (lưu ý: đảm bảo không có dấu phẩy thừa ở đây, code chuẩn bên trên đã sạch sẽ)
+            SaveCurrentSession();
         }
     }
 }

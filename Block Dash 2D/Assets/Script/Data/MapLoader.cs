@@ -12,6 +12,10 @@ public class MapLoader : MonoBehaviour
     [Tooltip("Nhập số Level cần tải (Ví dụ: 1 -> tải file Level_1.txt)")]
     public int levelNumber = 1;
 
+    [Header("Max Level Auto Detection (Chỉ đọc)")]
+    [Tooltip("Cấp độ cao nhất được tự động quét trong thư mục Resources/Maps")]
+    [SerializeField] private int maxAvailableLevel = 1;
+
     [Header("Block Palette (Bảng tra cứu Prefab)")]
     [Tooltip("Kéo các Prefab tương ứng với tên định danh loại block vào đây")]
     public List<BlockPaletteEntry> blockPalette = new List<BlockPaletteEntry>();
@@ -53,6 +57,33 @@ public class MapLoader : MonoBehaviour
             blocksContainer = transform;
         }
         BuildPaletteDictionary();
+        AutoDetectMaxLevel(); // Tự động quét số level tối đa khi khởi động
+    }
+
+    /// <summary>
+    /// Tự động quét trong thư mục Resources/Maps để tìm level cao nhất hiện có
+    /// </summary>
+    public void AutoDetectMaxLevel()
+    {
+        TextAsset[] allMaps = Resources.LoadAll<TextAsset>("Maps");
+        int highestLevel = 1;
+
+        foreach (var map in allMaps)
+        {
+            if (map != null && map.name.StartsWith("Level_"))
+            {
+                string levelStr = map.name.Replace("Level_", "");
+                if (int.TryParse(levelStr, out int lvlNum))
+                {
+                    if (lvlNum > highestLevel)
+                    {
+                        highestLevel = lvlNum;
+                    }
+                }
+            }
+        }
+
+        maxAvailableLevel = highestLevel;
     }
 
     private string NormalizeKey(string text)
@@ -117,7 +148,6 @@ public class MapLoader : MonoBehaviour
                 GameObject found = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (found != null)
                 {
-                    Debug.Log($"[MapLoader] Tự động tìm thấy Prefab '{assetName}' khớp với '{blockType}'!");
                     return found;
                 }
             }
@@ -132,6 +162,14 @@ public class MapLoader : MonoBehaviour
     /// </summary>
     public void LoadBoardAndGatesOnly(int level)
     {
+        AutoDetectMaxLevel();
+
+        // Nếu vượt quá mức map lớn nhất đang có, tự động giới hạn về level cao nhất
+        if (level > maxAvailableLevel)
+        {
+            level = maxAvailableLevel;
+        }
+
         levelNumber = level;
         string targetMapName = "Level_" + levelNumber;
         BuildPaletteDictionary();
@@ -163,6 +201,14 @@ public class MapLoader : MonoBehaviour
     [ContextMenu("Load Level By Number")]
     public void LoadLevel()
     {
+        AutoDetectMaxLevel();
+
+        // Nếu level vượt quá số map mới nhất đang có, tự động ép về level cao nhất
+        if (levelNumber > maxAvailableLevel)
+        {
+            levelNumber = maxAvailableLevel;
+        }
+
         string targetMapName = "Level_" + levelNumber;
         BuildPaletteDictionary();
 
@@ -548,7 +594,7 @@ public class MapLoaderEditor : Editor
         MapLoader loader = (MapLoader)target;
 
         EditorGUILayout.Space(5);
-        EditorGUILayout.HelpBox("Chỉ cần nhập số Level và nhấn Load để hiển thị toàn bộ Board, Surround, Cổng và Block lên Scene!", MessageType.Info);
+        EditorGUILayout.HelpBox("Tự động quét thư mục Resources/Maps để xác định giới hạn level tối đa!", MessageType.Info);
 
         DrawDefaultInspector();
 
