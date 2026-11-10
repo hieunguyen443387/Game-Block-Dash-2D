@@ -25,13 +25,7 @@ public class GameProgressManager : MonoBehaviour
 
     private void Start()
     {
-        currentSession = GameDataService.LoadSession(); // ✔️ Sửa lại đúng tên lớp
-
-        if (mapLoader != null)
-        {
-            mapLoader.levelNumber = currentSession.currentLevel;
-            // Không gọi ClearMap tự động ở đây để giữ nguyên trạng thái nếu cần
-        }
+        currentSession = GameDataService.LoadSession();
 
         UpdateLevelButtonUI();
 
@@ -41,7 +35,7 @@ public class GameProgressManager : MonoBehaviour
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
-        // LUÔN LUÔN ƯU TIÊN HIỂN THỊ MAIN MENU KHI VỪA KHỞI ĐỘNG GAME
+        // LUÔN MỞ MAIN MENU KHI VỪA VÀO GAME VÀ CHƯA LOAD MAP GÌ CẢ
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
         if (winPanel != null) winPanel.SetActive(false);
@@ -52,16 +46,12 @@ public class GameProgressManager : MonoBehaviour
 
     private void Update()
     {
-        // Loại bỏ hoàn toàn đoạn code tự động bật InGamePanel khi có block trong Start/Update,
-        // để game chỉ vào InGamePanel khi người chơi thực sự bấm nút Play hoặc chọn Level.
-        
-        // Liên tục kiểm tra điều kiện chiến thắng trong khi đang chơi game
+        // Chỉ làm nhiệm vụ kiểm tra điều kiện thắng khi game đang thực sự chơi
         if (isPlaying)
         {
             CheckWinCondition();
         }
     }
-
     private void UpdateLevelButtonUI()
     {
         if (levelNumberDisplay != null)
@@ -70,6 +60,9 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Nút Play thông thường (tiếp tục phiên chơi hiện tại hoặc load level đang lưu)
+    /// </summary>
     /// <summary>
     /// Nút Play thông thường (tiếp tục phiên chơi hiện tại hoặc load level đang lưu)
     /// </summary>
@@ -90,7 +83,8 @@ public class GameProgressManager : MonoBehaviour
             if (mapLoader != null)
             {
                 mapLoader.levelNumber = currentSession.currentLevel;
-                mapLoader.LoadLevel();
+                mapLoader.ClearMap(); // Xóa bàn cờ cũ trước khi load mới
+                mapLoader.LoadLevel(); // ⬅️ Bổ sung gọi lệnh load map tại đây để block được sinh ra!
             }
         }
 
@@ -281,7 +275,18 @@ public class GameProgressManager : MonoBehaviour
 
     public void OnClickNextLevel()
     {
+        // 1. Tăng level lên đúng 1 đơn vị so với level hiện tại
         int nextLevel = currentSession.currentLevel + 1;
+
+        // 2. Kiểm tra xem file map tiếp theo có tồn tại không trong thư mục Resources/Maps
+        TextAsset nextMapTest = Resources.Load<TextAsset>("Maps/Level_" + nextLevel);
+        if (nextMapTest == null)
+        {
+            // Nếu đã hết map (đạt màn cuối), giữ nguyên ở level hiện tại (hoặc lặp lại màn cuối)
+            nextLevel = currentSession.currentLevel; 
+        }
+
+        // Xóa session cũ và lưu level tiếp theo
         GameDataService.ClearActiveSession(nextLevel);
         
         currentSession = GameDataService.LoadSession();
@@ -290,7 +295,6 @@ public class GameProgressManager : MonoBehaviour
         if (levelNumberDisplay != null)
         {
             levelNumberDisplay.previewLevel = currentSession.currentLevel;
-            //levelNumberDisplay.UpdateEditorDecoder?.Invoke(); // hoặc UpdateEditorDisplay() tùy theo PixelNumberDisplay của bạn
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
@@ -304,7 +308,7 @@ public class GameProgressManager : MonoBehaviour
         if (mapLoader != null)
         {
             mapLoader.levelNumber = currentSession.currentLevel;
-            mapLoader.LoadLevel();
+            mapLoader.LoadLevel(); // Load map của level mới
         }
 
         isPlaying = true;

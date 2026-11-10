@@ -303,6 +303,22 @@ public class MapLoader : MonoBehaviour
             }
         }
 
+        // Tự động ẩn MainMenuPanel và bật InGamePanel khi load map thành công trong lúc chơi
+        if (Application.isPlaying)
+        {
+#if UNITY_2023_1_OR_NEWER
+            GameProgressManager progressManager = FindFirstObjectByType<GameProgressManager>();
+#else
+            GameProgressManager progressManager = FindObjectOfType<GameProgressManager>();
+#endif
+            if (progressManager != null)
+            {
+                if (progressManager.mainMenuPanel != null) progressManager.mainMenuPanel.SetActive(false);
+                if (progressManager.inGamePanel != null) progressManager.inGamePanel.SetActive(true);
+                if (progressManager.winPanel != null) progressManager.winPanel.SetActive(false);
+            }
+        }
+
         Debug.Log($"<color=green>LOAD LEVEL {levelNumber} THÀNH CÔNG!</color> Đã tái tạo Board, Surround, {spawnedCount}/{mapData.blocks.Count} blocks và {mapData.exitGates.Count} cổng thoát.");
     }
 
