@@ -25,12 +25,12 @@ public class GameProgressManager : MonoBehaviour
 
     private void Start()
     {
-        currentSession = GameDataService.LoadSession();
+        currentSession = GameDataService.LoadSession(); // ✔️ Sửa lại đúng tên lớp
 
         if (mapLoader != null)
         {
             mapLoader.levelNumber = currentSession.currentLevel;
-            // Không gọi ClearMap tự động trong Start để tránh xóa mất map khi bạn chủ động Load từ MapLoader trong Editor
+            // Không gọi ClearMap tự động ở đây để giữ nguyên trạng thái nếu cần
         }
 
         UpdateLevelButtonUI();
@@ -41,40 +41,20 @@ public class GameProgressManager : MonoBehaviour
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
-        // Nếu game bắt đầu mà bàn cờ đã có sẵn block (do test trực tiếp từ MapLoader), tự động vào luôn trạng thái chơi
-        if (blocksContainer != null && blocksContainer.childCount > 0)
-        {
-            if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-            if (inGamePanel != null) inGamePanel.SetActive(true);
-            if (winPanel != null) winPanel.SetActive(false);
-            isPlaying = true;
-            hasSpawnedBlocks = true;
-        }
-        else
-        {
-            if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
-            if (inGamePanel != null) inGamePanel.SetActive(false);
-            if (winPanel != null) winPanel.SetActive(false);
-            isPlaying = false;
-            hasSpawnedBlocks = false;
-        }
+        // LUÔN LUÔN ƯU TIÊN HIỂN THỊ MAIN MENU KHI VỪA KHỞI ĐỘNG GAME
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+        if (inGamePanel != null) inGamePanel.SetActive(false);
+        if (winPanel != null) winPanel.SetActive(false);
+
+        isPlaying = false;
+        hasSpawnedBlocks = false;
     }
 
     private void Update()
     {
-        // HỖ TRỢ TEST TRỰC TIẾP: Nếu bạn bấm load map từ MapLoader trong Editor khi game đang chạy, 
-        // hệ thống sẽ tự động bắt lấy block được sinh ra và bật trạng thái chơi luôn.
-        if (!isPlaying && blocksContainer != null && blocksContainer.childCount > 0)
-        {
-            if (mainMenuPanel != null && mainMenuPanel.activeSelf)
-            {
-                mainMenuPanel.SetActive(false);
-                if (inGamePanel != null) inGamePanel.SetActive(true);
-            }
-            isPlaying = true;
-            hasSpawnedBlocks = true;
-        }
-
+        // Loại bỏ hoàn toàn đoạn code tự động bật InGamePanel khi có block trong Start/Update,
+        // để game chỉ vào InGamePanel khi người chơi thực sự bấm nút Play hoặc chọn Level.
+        
         // Liên tục kiểm tra điều kiện chiến thắng trong khi đang chơi game
         if (isPlaying)
         {
@@ -310,7 +290,7 @@ public class GameProgressManager : MonoBehaviour
         if (levelNumberDisplay != null)
         {
             levelNumberDisplay.previewLevel = currentSession.currentLevel;
-            levelNumberDisplay.UpdateEditorDecoder?.Invoke(); // hoặc UpdateEditorDisplay() tùy theo PixelNumberDisplay của bạn
+            //levelNumberDisplay.UpdateEditorDecoder?.Invoke(); // hoặc UpdateEditorDisplay() tùy theo PixelNumberDisplay của bạn
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
