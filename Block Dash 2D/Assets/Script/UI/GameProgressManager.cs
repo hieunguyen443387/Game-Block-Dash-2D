@@ -30,7 +30,7 @@ public class GameProgressManager : MonoBehaviour
         if (mapLoader != null)
         {
             mapLoader.levelNumber = currentSession.currentLevel;
-            mapLoader.ClearMap();
+            // Không gọi ClearMap tự động trong Start để tránh xóa mất map khi bạn chủ động Load từ MapLoader trong Editor
         }
 
         UpdateLevelButtonUI();
@@ -41,15 +41,40 @@ public class GameProgressManager : MonoBehaviour
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
-        if (inGamePanel != null) inGamePanel.SetActive(false);
-        if (winPanel != null) winPanel.SetActive(false);
-        isPlaying = false;
-        hasSpawnedBlocks = false;
+        // Nếu game bắt đầu mà bàn cờ đã có sẵn block (do test trực tiếp từ MapLoader), tự động vào luôn trạng thái chơi
+        if (blocksContainer != null && blocksContainer.childCount > 0)
+        {
+            if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+            if (inGamePanel != null) inGamePanel.SetActive(true);
+            if (winPanel != null) winPanel.SetActive(false);
+            isPlaying = true;
+            hasSpawnedBlocks = true;
+        }
+        else
+        {
+            if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+            if (inGamePanel != null) inGamePanel.SetActive(false);
+            if (winPanel != null) winPanel.SetActive(false);
+            isPlaying = false;
+            hasSpawnedBlocks = false;
+        }
     }
 
     private void Update()
     {
+        // HỖ TRỢ TEST TRỰC TIẾP: Nếu bạn bấm load map từ MapLoader trong Editor khi game đang chạy, 
+        // hệ thống sẽ tự động bắt lấy block được sinh ra và bật trạng thái chơi luôn.
+        if (!isPlaying && blocksContainer != null && blocksContainer.childCount > 0)
+        {
+            if (mainMenuPanel != null && mainMenuPanel.activeSelf)
+            {
+                mainMenuPanel.SetActive(false);
+                if (inGamePanel != null) inGamePanel.SetActive(true);
+            }
+            isPlaying = true;
+            hasSpawnedBlocks = true;
+        }
+
         // Liên tục kiểm tra điều kiện chiến thắng trong khi đang chơi game
         if (isPlaying)
         {
@@ -95,7 +120,6 @@ public class GameProgressManager : MonoBehaviour
 
     /// <summary>
     /// Bắt đầu chơi một level cụ thể được chọn (Ví dụ: Chọn thẳng Level 1 từ menu chọn màn).
-    /// Giúp xóa sạch session cũ và không bị kẹt phiên chơi dở của level khác.
     /// </summary>
     public void SelectLevelAndPlay(int targetLevel)
     {
@@ -103,7 +127,6 @@ public class GameProgressManager : MonoBehaviour
         if (inGamePanel != null) inGamePanel.SetActive(true);
         if (winPanel != null) winPanel.SetActive(false);
 
-        // Khởi tạo phiên mới hoàn toàn tại level được chọn, xóa sạch session cũ
         currentSession = GameDataService.StartNewSessionAtLevel(targetLevel);
         UpdateLevelButtonUI();
 
@@ -113,7 +136,6 @@ public class GameProgressManager : MonoBehaviour
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
-        // Xóa bàn cờ cũ và load map mới tinh của level được chọn
         if (mapLoader != null)
         {
             mapLoader.ClearMap();
@@ -279,18 +301,7 @@ public class GameProgressManager : MonoBehaviour
 
     public void OnClickNextLevel()
     {
-        // Định nghĩa số level tối đa hiện có của bạn (Ví dụ hiện tại có đến Level 6 là hết)
-        int maxAvailableLevel = 6; // Bạn có thể thay đổi con số này tương ứng với map cao nhất bạn đã tạo
-
         int nextLevel = currentSession.currentLevel + 1;
-
-        // Nếu level tiếp theo vượt quá mức level mới nhất hiện có, ta giữ nguyên ở mức cao nhất (hoặc đưa về 1 tùy ý)
-        if (nextLevel > maxAvailableLevel)
-        {
-            nextLevel = maxAvailableLevel; // Giữ lại ở level mới nhất (ví dụ Level 6)
-            // Hoặc nếu muốn lặp lại vòng tròn từ đầu thì để: nextLevel = 1;
-        }
-
         GameDataService.ClearActiveSession(nextLevel);
         
         currentSession = GameDataService.LoadSession();
@@ -299,6 +310,7 @@ public class GameProgressManager : MonoBehaviour
         if (levelNumberDisplay != null)
         {
             levelNumberDisplay.previewLevel = currentSession.currentLevel;
+            levelNumberDisplay.UpdateEditorDecoder?.Invoke(); // hoặc UpdateEditorDisplay() tùy theo PixelNumberDisplay của bạn
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
