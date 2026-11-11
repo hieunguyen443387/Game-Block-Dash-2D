@@ -185,7 +185,7 @@ public class MapLoader : MonoBehaviour
         loadedColumns = mapData.columns;
 
         RebuildBoardAndSurround(mapData);
-        ClearMap(); // Xóa block cũ
+        ClearMap(); 
 
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         SpawnExitGates(mapData, container);
@@ -222,7 +222,7 @@ public class MapLoader : MonoBehaviour
         loadedColumns = mapData.columns;
 
         RebuildBoardAndSurround(mapData);
-        ClearMap(); // Xóa sạch các block cũ trước khi load mới
+        ClearMap(); 
 
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         SpawnExitGates(mapData, container);
@@ -554,11 +554,12 @@ public class MapLoader : MonoBehaviour
     }
 
     /// <summary>
-    /// Chỉ xóa sạch các block hiện có (Giữ nguyên Board, Sideline và Cổng thoát)
+    /// Xóa toàn bộ các block đang có trong Scene (Đồng bộ hóa với BlockSpawner)
     /// </summary>
     [ContextMenu("Clear Blocks Only")]
     public void ClearMap()
     {
+        // 1. Xóa các block nằm trong container của MapLoader
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         for (int i = container.childCount - 1; i >= 0; i--)
         {
@@ -573,6 +574,7 @@ public class MapLoader : MonoBehaviour
             Destroy(child.gameObject);
         }
 
+        // 2. Tự động tìm và gọi xóa trên BlockSpawner nếu có trong Scene
 #if UNITY_2023_1_OR_NEWER
         BlockSpawner spawner = FindFirstObjectByType<BlockSpawner>();
 #else
@@ -583,7 +585,28 @@ public class MapLoader : MonoBehaviour
             spawner.ClearAllBlocks();
         }
 
-        Debug.Log("<color=orange>Đã xóa sạch toàn bộ Block trên bàn cờ!</color>");
+        // 3. Quét và tiêu diệt tất cả các BlockItem còn sót lại bất kỳ đâu trong Scene
+#if UNITY_2023_1_OR_NEWER
+        BlockItem[] remainingBlocks = FindObjectsByType<BlockItem>(FindObjectsSortMode.None);
+#else
+        BlockItem[] remainingBlocks = FindObjectsOfType<BlockItem>();
+#endif
+        foreach (var block in remainingBlocks)
+        {
+            if (block != null)
+            {
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    Undo.DestroyObjectImmediate(block.gameObject);
+                    continue;
+                }
+#endif
+                Destroy(block.gameObject);
+            }
+        }
+
+        Debug.Log("<color=orange>Đã quét và xóa sạch toàn bộ Block trên bàn cờ!</color>");
     }
 }
 
@@ -609,12 +632,12 @@ public class MapLoaderEditor : Editor
             loader.LoadLevel();
         }
 
-        // Nút Clear Blocks Only
+        // Nút Clear Blocks Only (Đồng bộ toàn diện)
         EditorGUILayout.Space(5);
         GUI.backgroundColor = new Color(1f, 0.4f, 0.4f);
-        if (GUILayout.Button("🗑️ CLEAR BLOCKS ONLY (Xóa các block)", GUILayout.Height(35)))
+        if (GUILayout.Button("🗑️ CLEAR BLOCKS ONLY (Xóa tất cả block)", GUILayout.Height(35)))
         {
-            Undo.RegisterFullObjectHierarchyUndo(loader.gameObject, "Clear Blocks Only");
+            Undo.RegisterFullObjectHierarchyUndo(loader.gameObject, "Clear All Blocks Only");
             loader.ClearMap();
             EditorUtility.SetDirty(loader);
         }

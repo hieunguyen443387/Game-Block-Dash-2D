@@ -89,9 +89,6 @@ public class BlockSpawner : MonoBehaviour
         Debug.Log("Đã tạo Block: " + newBlock.name);
     }
 
-    /// <summary>
-    /// Tự động rải block 2 cell (Arrow Block) phủ kín bàn cờ, tự động kiểm tra khoảng trống để không bị chồng lấp
-    /// </summary>
     public void SpawnAllGridBlocks()
     {
         if (blockList.Count == 0)
@@ -100,10 +97,9 @@ public class BlockSpawner : MonoBehaviour
             return;
         }
 
-        // 1. Dọn sạch các block cũ trước khi rải mới
+        // 1. Xóa sạch mọi block cũ trước khi rải
         ClearAllBlocks();
 
-        // Mặc định luôn lấy block đầu tiên (Index 0 - Block Arrow 2 cell)
         int targetIndex = 0;
         GameObject prefab = blockList[targetIndex].blockPrefab;
         
@@ -113,7 +109,6 @@ public class BlockSpawner : MonoBehaviour
             return;
         }
 
-        // Tự động tìm Board nếu chưa gán
         if (boardTransform == null)
         {
             AutoDetectBoard();
@@ -125,11 +120,7 @@ public class BlockSpawner : MonoBehaviour
             return;
         }
 
-        // Lấy tất cả các cell và sắp xếp/lọc theo hệ thống tọa độ Cell_Row_Col
         Transform[] allCells = boardTransform.GetComponentsInChildren<Transform>(true);
-        
-        // Dùng Dictionary để lưu trạng thái các ô cell theo tọa độ (row, col) xem đã bị chiếm chưa
-        // Key: "row_col", Value: true/false
         Dictionary<string, bool> occupiedCells = new Dictionary<string, bool>();
         Dictionary<string, Transform> cellLookup = new Dictionary<string, Transform>();
 
@@ -144,22 +135,19 @@ public class BlockSpawner : MonoBehaviour
 
         int spawnedCount = 0;
 
-        // Duyệt qua từng cell để lấp đầy bằng các block 2 cell
         foreach (var kvp in cellLookup)
         {
-            string cellName = kvp.Key; // Ví dụ: Cell_0_0 (Row_Col hoặc tùy theo format của bạn)
-            if (occupiedCells[cellName]) continue; // Nếu ô này đã bị chiếm thì bỏ qua
+            string cellName = kvp.Key;
+            if (occupiedCells[cellName]) continue;
 
             Transform currentCell = kvp.Value;
             
-            // Tách tên để lấy tọa độ row và col (Format: Cell_Row_Col)
             string[] parts = cellName.Split('_');
             if (parts.Length < 3) continue;
 
             if (!int.TryParse(parts[1], out int row) || !int.TryParse(parts[2], out int col))
                 continue;
 
-            // Thử tìm ô bên cạnh (Cột tiếp theo col + 1 hoặc hàng tiếp theo row + 1) để ghép thành block 2 cell
             string rightCellName = $"Cell_{row}_{col + 1}";
             string topCellName = $"Cell_{row + 1}_{col}";
 
@@ -168,24 +156,19 @@ public class BlockSpawner : MonoBehaviour
 
             if (!canPlaceHorizontal && !canPlaceVertical) 
             {
-                // Nếu không đủ chỗ cho 2 cell thì tạm bỏ qua ô lẻ này để tránh lỗi
                 continue; 
             }
 
-            // Ưu tiên xếp ngang hoặc dọc ngẫu nhiên
             bool isHorizontal = canPlaceHorizontal && (!canPlaceVertical || Random.value > 0.5f);
 
             Transform secondCell = isHorizontal ? cellLookup[rightCellName] : cellLookup[topCellName];
             string secondCellName = isHorizontal ? rightCellName : topCellName;
 
-            // Tính vị trí tâm nằm giữa 2 ô cell
             Vector3 spawnPos = (currentCell.position + secondCell.position) / 2f;
 
-            // Góc xoay: Ngang (0 độ hoặc 180 độ), Dọc (90 độ hoặc 270 độ)
             float rotZ = isHorizontal ? (Random.value > 0.5f ? 0f : 180f) : (Random.value > 0.5f ? 90f : 270f);
             Quaternion spawnRot = Quaternion.Euler(0f, 0f, rotZ);
 
-            // Tạo block 2 cell tại vị trí trung tâm
             GameObject newBlock = Instantiate(
                 prefab,
                 spawnPos,
@@ -195,15 +178,12 @@ public class BlockSpawner : MonoBehaviour
 
             newBlock.name = $"{blockList[targetIndex].blockName}_{row}_{col}";
 
-            // Scale kích thước chuẩn
             float size = blockSizePixels / pixelsPerUnit;
             newBlock.transform.localScale = Vector3.one * size;
 
-            // Đánh dấu cả 2 ô cell này đã bị chiếm chỗ
             occupiedCells[cellName] = true;
             occupiedCells[secondCellName] = true;
 
-            // Xử lý hướng cho TwoWayBlock hoặc ArrowBlock nếu có
             TwoWayBlock twoWay = newBlock.GetComponent<TwoWayBlock>();
             if (twoWay != null)
             {
@@ -271,9 +251,13 @@ public class BlockSpawner : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Xóa toàn bộ block trên Scene (Đồng bộ hóa quét toàn bộ BlockItem)
+    /// </summary>
     [ContextMenu("Clear All Blocks")]
     public void ClearAllBlocks()
     {
+        // 1. Xóa các con trực tiếp của spawner
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             Transform child = transform.GetChild(i);
@@ -287,8 +271,48 @@ public class BlockSpawner : MonoBehaviour
             Destroy(child.gameObject);
         }
 
+        // 2. Quét và tiêu diệt tất cả các BlockItem còn sót lại trên toàn Scene
+#if UNITY_2023_1_OR_NEWER
+        BlockItem[] allSceneBlocks = FindObjectsByType<BlockItem>(FindObjectsSortMode.None);
+        MapLoader loader = FindFirstObjectByType<MapLoader>();
+#else
+        BlockItem[] allSceneBlocks = FindObjectsOfType<BlockItem>();
+        MapLoader loader = FindObjectOfType<MapLoader>();
+#endif
+
+        foreach (var block in allSceneBlocks)
+        {
+            if (block != null)
+            {
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    Undo.DestroyObjectImmediate(block.gameObject);
+                    continue;
+                }
+#endif
+                Destroy(block.gameObject);
+            }
+        }
+
+        if (loader != null && loader.transform != transform)
+        {
+            for (int i = loader.transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = loader.transform.GetChild(i);
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                {
+                    Undo.DestroyObjectImmediate(child.gameObject);
+                    continue;
+                }
+#endif
+                Destroy(child.gameObject);
+            }
+        }
+
         activeBlocks.Clear();
-        Debug.Log("<color=orange>Đã xóa toàn bộ block trên màn hình!</color>");
+        Debug.Log("<color=orange>Đã quét và xóa sạch toàn bộ block trên màn hình!</color>");
     }
 
     public void RemoveBlockFromList(BlockItem blockItem)
@@ -309,14 +333,12 @@ public class BlockSpawnerEditor : Editor
         BlockSpawner spawner = (BlockSpawner)target;
         serializedObject.Update();
 
-        // 1. Vẽ danh sách Block List trước
         SerializedProperty blockListProp = serializedObject.FindProperty("blockList");
         EditorGUILayout.PropertyField(blockListProp, true);
 
         EditorGUILayout.Space(5);
         EditorGUILayout.LabelField("Spawn Settings", EditorStyles.boldLabel);
 
-        // 2. Tạo Dropdown tự động dựa trên blockList hiện có
         SerializedProperty selectedIndexProp = serializedObject.FindProperty("selectedBlockIndex");
         string[] displayOptions;
 
@@ -351,7 +373,6 @@ public class BlockSpawnerEditor : Editor
             }
         }
 
-        // 3. Vẽ các thuộc tính còn lại tự động
         SerializedProperty prop = serializedObject.GetIterator();
         bool enterChildren = true;
         while (prop.NextVisible(enterChildren))
@@ -367,14 +388,12 @@ public class BlockSpawnerEditor : Editor
 
         EditorGUILayout.Space(10);
 
-        // Nút Tạo 1 Block đơn lẻ tại tọa độ tùy chỉnh
         GUI.backgroundColor = new Color(0.2f, 0.6f, 1f);
         if (GUILayout.Button("Create Single Block", GUILayout.Height(30)))
         {
             spawner.CreateBlock();
         }
 
-        // Nút Tạo Block phủ kín toàn bộ bản đồ (Grid Auto-Fill) - Mặc định lấy Block 0 và xoay ngẫu nhiên các hướng
         GUI.backgroundColor = new Color(0.2f, 0.8f, 0.4f);
         if (GUILayout.Button("⚡ Spawn Grid Blocks (Full Map - Random Hướng)", GUILayout.Height(38)))
         {
@@ -383,9 +402,8 @@ public class BlockSpawnerEditor : Editor
             EditorUtility.SetDirty(spawner);
         }
 
-        // Nút Xóa toàn bộ block
         GUI.backgroundColor = new Color(1f, 0.4f, 0.4f);
-        if (GUILayout.Button("🗑️ Clear All Blocks", GUILayout.Height(35)))
+        if (GUILayout.Button("🗑️ Clear All Blocks (Xóa tất cả block)", GUILayout.Height(35)))
         {
             Undo.RegisterFullObjectHierarchyUndo(spawner.gameObject, "Clear All Blocks");
             spawner.ClearAllBlocks();
