@@ -57,12 +57,9 @@ public class MapLoader : MonoBehaviour
             blocksContainer = transform;
         }
         BuildPaletteDictionary();
-        AutoDetectMaxLevel(); // Tự động quét số level tối đa khi khởi động
+        AutoDetectMaxLevel();
     }
 
-    /// <summary>
-    /// Tự động quét trong thư mục Resources/Maps để tìm level cao nhất hiện có
-    /// </summary>
     public void AutoDetectMaxLevel()
     {
         TextAsset[] allMaps = Resources.LoadAll<TextAsset>("Maps");
@@ -157,14 +154,10 @@ public class MapLoader : MonoBehaviour
         return null;
     }
 
-    /// <summary>
-    /// Chỉ dựng lại Board, Surround và ExitGates từ file Map (Dùng khi khôi phục Session chơi dở)
-    /// </summary>
     public void LoadBoardAndGatesOnly(int level)
     {
         AutoDetectMaxLevel();
 
-        // Nếu vượt quá mức map lớn nhất đang có, tự động giới hạn về level cao nhất
         if (level > maxAvailableLevel)
         {
             level = maxAvailableLevel;
@@ -192,7 +185,7 @@ public class MapLoader : MonoBehaviour
         loadedColumns = mapData.columns;
 
         RebuildBoardAndSurround(mapData);
-        ClearMap();
+        ClearMap(); // Xóa block cũ
 
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         SpawnExitGates(mapData, container);
@@ -203,7 +196,6 @@ public class MapLoader : MonoBehaviour
     {
         AutoDetectMaxLevel();
 
-        // Nếu level vượt quá số map mới nhất đang có, tự động ép về level cao nhất
         if (levelNumber > maxAvailableLevel)
         {
             levelNumber = maxAvailableLevel;
@@ -230,7 +222,7 @@ public class MapLoader : MonoBehaviour
         loadedColumns = mapData.columns;
 
         RebuildBoardAndSurround(mapData);
-        ClearMap();
+        ClearMap(); // Xóa sạch các block cũ trước khi load mới
 
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         SpawnExitGates(mapData, container);
@@ -303,7 +295,6 @@ public class MapLoader : MonoBehaviour
             }
         }
 
-        // Tự động ẩn MainMenuPanel và bật InGamePanel khi load map thành công trong lúc chơi
         if (Application.isPlaying)
         {
 #if UNITY_2023_1_OR_NEWER
@@ -562,7 +553,10 @@ public class MapLoader : MonoBehaviour
         }
     }
 
-    [ContextMenu("Clear Map")]
+    /// <summary>
+    /// Chỉ xóa sạch các block hiện có (Giữ nguyên Board, Sideline và Cổng thoát)
+    /// </summary>
+    [ContextMenu("Clear Blocks Only")]
     public void ClearMap()
     {
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
@@ -589,15 +583,7 @@ public class MapLoader : MonoBehaviour
             spawner.ClearAllBlocks();
         }
 
-#if UNITY_2023_1_OR_NEWER
-        ExitGateGenerator gateGen = FindFirstObjectByType<ExitGateGenerator>();
-#else
-        ExitGateGenerator gateGen = FindObjectOfType<ExitGateGenerator>();
-#endif
-        if (gateGen != null)
-        {
-            gateGen.ClearExitGate();
-        }
+        Debug.Log("<color=orange>Đã xóa sạch toàn bộ Block trên bàn cờ!</color>");
     }
 }
 
@@ -616,10 +602,21 @@ public class MapLoaderEditor : Editor
 
         EditorGUILayout.Space(10);
 
+        // Nút Load Level
         GUI.backgroundColor = new Color(0.2f, 0.6f, 1f);
         if (GUILayout.Button($"📂 LOAD LEVEL {loader.levelNumber}", GUILayout.Height(42)))
         {
             loader.LoadLevel();
+        }
+
+        // Nút Clear Blocks Only
+        EditorGUILayout.Space(5);
+        GUI.backgroundColor = new Color(1f, 0.4f, 0.4f);
+        if (GUILayout.Button("🗑️ CLEAR BLOCKS ONLY (Xóa các block)", GUILayout.Height(35)))
+        {
+            Undo.RegisterFullObjectHierarchyUndo(loader.gameObject, "Clear Blocks Only");
+            loader.ClearMap();
+            EditorUtility.SetDirty(loader);
         }
 
         GUI.backgroundColor = Color.white;
