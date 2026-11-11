@@ -660,7 +660,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a9c943849216bc4f9b9830301730c95, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HitCountdownBoomBlock
-  hasBoom: 1
+  hasBoom: 0
   hitCount: 3
   boomOverlay: {fileID: 2176785002442306801}
   sparkEffectObject: {fileID: 2083804932982951538}

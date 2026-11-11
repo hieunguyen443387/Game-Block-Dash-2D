@@ -25,6 +25,8 @@ public class BlockSpawner : MonoBehaviour
     public Transform boardTransform;
     [Tooltip("Kích thước mỗi ô Cell trên Board (thường là 1f nếu scale chuẩn)")]
     public float cellSize = 1f;
+    [Tooltip("Tự động xoay ngẫu nhiên các hướng (0, 90, 180, 270 độ) khi tạo full map")]
+    public bool randomRotationOnGridSpawn = true;
 
     [Header("Freeze Settings")]
     [Tooltip("Tự động đóng băng khối khi vừa được tạo ra")]
@@ -88,20 +90,26 @@ public class BlockSpawner : MonoBehaviour
     }
 
     /// <summary>
-    /// Tự động sinh block phủ kín toàn bộ các ô Cell có sẵn trên bàn cờ
+    /// Tự động rải block 2 cell (Arrow Block) phủ kín bàn cờ, tự động kiểm tra khoảng trống để không bị chồng lấp
     /// </summary>
     public void SpawnAllGridBlocks()
     {
-        if (blockList.Count == 0 || selectedBlockIndex < 0 || selectedBlockIndex >= blockList.Count)
+        if (blockList.Count == 0)
         {
-            Debug.LogWarning("Vui lòng chọn loại Block hợp lệ trong danh sách trước khi tạo hàng loạt!");
+            Debug.LogWarning("Danh sách Block đang trống!");
             return;
         }
 
-        GameObject prefab = blockList[selectedBlockIndex].blockPrefab;
+        // 1. Dọn sạch các block cũ trước khi rải mới
+        ClearAllBlocks();
+
+        // Mặc định luôn lấy block đầu tiên (Index 0 - Block Arrow 2 cell)
+        int targetIndex = 0;
+        GameObject prefab = blockList[targetIndex].blockPrefab;
+        
         if (prefab == null)
         {
-            Debug.LogWarning("Prefab của Block được chọn đang bị trống!");
+            Debug.LogWarning("Prefab của Block đầu tiên (Index 0) đang bị trống!");
             return;
         }
 
@@ -117,54 +125,105 @@ public class BlockSpawner : MonoBehaviour
             return;
         }
 
+        // Lấy tất cả các cell và sắp xếp/lọc theo hệ thống tọa độ Cell_Row_Col
         Transform[] allCells = boardTransform.GetComponentsInChildren<Transform>(true);
-        int spawnedCount = 0;
+        
+        // Dùng Dictionary để lưu trạng thái các ô cell theo tọa độ (row, col) xem đã bị chiếm chưa
+        // Key: "row_col", Value: true/false
+        Dictionary<string, bool> occupiedCells = new Dictionary<string, bool>();
+        Dictionary<string, Transform> cellLookup = new Dictionary<string, Transform>();
 
         foreach (Transform cell in allCells)
         {
             if (cell == null || !cell.name.StartsWith("Cell_"))
                 continue;
 
-            // Tạo block tại vị trí của cell tạm thời
+            cellLookup[cell.name] = cell;
+            occupiedCells[cell.name] = false;
+        }
+
+        int spawnedCount = 0;
+
+        // Duyệt qua từng cell để lấp đầy bằng các block 2 cell
+        foreach (var kvp in cellLookup)
+        {
+            string cellName = kvp.Key; // Ví dụ: Cell_0_0 (Row_Col hoặc tùy theo format của bạn)
+            if (occupiedCells[cellName]) continue; // Nếu ô này đã bị chiếm thì bỏ qua
+
+            Transform currentCell = kvp.Value;
+            
+            // Tách tên để lấy tọa độ row và col (Format: Cell_Row_Col)
+            string[] parts = cellName.Split('_');
+            if (parts.Length < 3) continue;
+
+            if (!int.TryParse(parts[1], out int row) || !int.TryParse(parts[2], out int col))
+                continue;
+
+            // Thử tìm ô bên cạnh (Cột tiếp theo col + 1 hoặc hàng tiếp theo row + 1) để ghép thành block 2 cell
+            string rightCellName = $"Cell_{row}_{col + 1}";
+            string topCellName = $"Cell_{row + 1}_{col}";
+
+            bool canPlaceHorizontal = cellLookup.ContainsKey(rightCellName) && !occupiedCells[rightCellName];
+            bool canPlaceVertical = cellLookup.ContainsKey(topCellName) && !occupiedCells[topCellName];
+
+            if (!canPlaceHorizontal && !canPlaceVertical) 
+            {
+                // Nếu không đủ chỗ cho 2 cell thì tạm bỏ qua ô lẻ này để tránh lỗi
+                continue; 
+            }
+
+            // Ưu tiên xếp ngang hoặc dọc ngẫu nhiên
+            bool isHorizontal = canPlaceHorizontal && (!canPlaceVertical || Random.value > 0.5f);
+
+            Transform secondCell = isHorizontal ? cellLookup[rightCellName] : cellLookup[topCellName];
+            string secondCellName = isHorizontal ? rightCellName : topCellName;
+
+            // Tính vị trí tâm nằm giữa 2 ô cell
+            Vector3 spawnPos = (currentCell.position + secondCell.position) / 2f;
+
+            // Góc xoay: Ngang (0 độ hoặc 180 độ), Dọc (90 độ hoặc 270 độ)
+            float rotZ = isHorizontal ? (Random.value > 0.5f ? 0f : 180f) : (Random.value > 0.5f ? 90f : 270f);
+            Quaternion spawnRot = Quaternion.Euler(0f, 0f, rotZ);
+
+            // Tạo block 2 cell tại vị trí trung tâm
             GameObject newBlock = Instantiate(
                 prefab,
-                cell.position,
-                Quaternion.identity,
+                spawnPos,
+                spawnRot,
                 transform
             );
 
-            newBlock.name = $"{blockList[selectedBlockIndex].blockName}_{cell.name.Replace("Cell_", "")}";
+            newBlock.name = $"{blockList[targetIndex].blockName}_{row}_{col}";
 
-            // Căn chỉnh chuẩn vào lưới dựa trên logic SnapToGrid
-            SpriteRenderer spriteRenderer = newBlock.GetComponentInChildren<SpriteRenderer>();
-            if (spriteRenderer != null)
-            {
-                Bounds bounds = spriteRenderer.bounds;
-                Vector3 blockBottomLeftOffset = new Vector3(
-                    bounds.min.x - newBlock.transform.position.x,
-                    bounds.min.y - newBlock.transform.position.y,
-                    0f
-                );
-
-                Vector3 cellBottomLeft = new Vector3(
-                    cell.position.x - cellSize * 0.5f,
-                    cell.position.y - cellSize * 0.5f,
-                    newBlock.transform.position.z
-                );
-
-                Vector3 targetPosition = cellBottomLeft - blockBottomLeftOffset;
-                targetPosition.z = newBlock.transform.position.z;
-                newBlock.transform.position = targetPosition;
-            }
-
-            // Scale kích thước
+            // Scale kích thước chuẩn
             float size = blockSizePixels / pixelsPerUnit;
             newBlock.transform.localScale = Vector3.one * size;
 
-            BlockItem blockItem = newBlock.GetComponent<BlockItem>();
-            if (blockItem != null && !activeBlocks.Contains(blockItem))
+            // Đánh dấu cả 2 ô cell này đã bị chiếm chỗ
+            occupiedCells[cellName] = true;
+            occupiedCells[secondCellName] = true;
+
+            // Xử lý hướng cho TwoWayBlock hoặc ArrowBlock nếu có
+            TwoWayBlock twoWay = newBlock.GetComponent<TwoWayBlock>();
+            if (twoWay != null)
             {
-                activeBlocks.Add(blockItem);
+                if (Mathf.Abs(rotZ - 0f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Right;
+                else if (Mathf.Abs(rotZ - 180f) < 5f) twoWay.horizontalStartDir = HorizontalStartDirection.Left;
+                else if (Mathf.Abs(rotZ - 90f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Top; }
+                else if (Mathf.Abs(rotZ - 270f) < 5f) { twoWay.moveAxis = TwoWayAxis.Vertical; twoWay.verticalStartDir = VerticalStartDirection.Down; }
+
+                twoWay.InitializeCurrentDirection();
+                twoWay.ApplyRotationFromDirection();
+            }
+
+            BlockItem blockItem = newBlock.GetComponent<BlockItem>();
+            if (blockItem != null)
+            {
+                blockItem.blockType = blockList[targetIndex].blockName;
+                if (!activeBlocks.Contains(blockItem))
+                {
+                    activeBlocks.Add(blockItem);
+                }
             }
 
             FreezableBlock freezable = newBlock.GetComponent<FreezableBlock>();
@@ -176,7 +235,7 @@ public class BlockSpawner : MonoBehaviour
             spawnedCount++;
         }
 
-        Debug.Log($"<color=green>Đã tự động sinh thành công {spawnedCount} block lên toàn bộ bàn cờ!</color>");
+        Debug.Log($"<color=green>Đã rải thành công {spawnedCount} Arrow Block (2 cell) khít bàn cờ, không bị chồng lấp!</color>");
     }
 
     public void AutoDetectBoard()
@@ -315,9 +374,9 @@ public class BlockSpawnerEditor : Editor
             spawner.CreateBlock();
         }
 
-        // Nút Tạo Block phủ kín toàn bộ bản đồ (Grid Auto-Fill)
+        // Nút Tạo Block phủ kín toàn bộ bản đồ (Grid Auto-Fill) - Mặc định lấy Block 0 và xoay ngẫu nhiên các hướng
         GUI.backgroundColor = new Color(0.2f, 0.8f, 0.4f);
-        if (GUILayout.Button("⚡ Spawn Grid Blocks (Full Map)", GUILayout.Height(38)))
+        if (GUILayout.Button("⚡ Spawn Grid Blocks (Full Map - Random Hướng)", GUILayout.Height(38)))
         {
             Undo.RegisterFullObjectHierarchyUndo(spawner.gameObject, "Spawn Grid Blocks");
             spawner.SpawnAllGridBlocks();
