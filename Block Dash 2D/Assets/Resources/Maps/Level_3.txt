@@ -399,79 +399,7 @@
     "surroundMode": 0,
     "blocks": [
         {
-            "blockType": "Block 4x4_5_6",
-            "gridX": 5,
-            "gridY": 6,
-            "posX": 1.9224379062652588,
-            "posY": 0.9224379658699036,
-            "rotationZ": 270.0,
-            "isFrozen": false,
-            "freezeCount": 0,
-            "hasBoom": false,
-            "hitCount": 3
-        },
-        {
-            "blockType": "Arrow Block_4_9",
-            "gridX": 4,
-            "gridY": 9,
-            "posX": 0.8975069522857666,
-            "posY": 3.4487531185150148,
-            "rotationZ": 0.0,
-            "isFrozen": false,
-            "freezeCount": 3,
-            "hasBoom": false,
-            "hitCount": 3
-        },
-        {
-            "blockType": "Arrow Block_6_9",
-            "gridX": 6,
-            "gridY": 9,
-            "posX": 2.448753595352173,
-            "posY": 3.8975069522857668,
-            "rotationZ": 90.0,
-            "isFrozen": false,
-            "freezeCount": 3,
-            "hasBoom": true,
-            "hitCount": 3
-        },
-        {
-            "blockType": "Free Move Block_5_8",
-            "gridX": 5,
-            "gridY": 8,
-            "posX": 1.4487535953521729,
-            "posY": 2.448753595352173,
-            "rotationZ": 0.0,
-            "isFrozen": false,
-            "freezeCount": 0,
-            "hasBoom": false,
-            "hitCount": 3
-        },
-        {
-            "blockType": "Arrow Block_6_8",
-            "gridX": 6,
-            "gridY": 8,
-            "posX": 2.8975069522857668,
-            "posY": 2.448753595352173,
-            "rotationZ": 180.0,
-            "isFrozen": false,
-            "freezeCount": 3,
-            "hasBoom": true,
-            "hitCount": 3
-        },
-        {
-            "blockType": "Arrow Block_0_11",
-            "gridX": 0,
-            "gridY": 11,
-            "posX": -3.1024930477142336,
-            "posY": 5.448753356933594,
-            "rotationZ": 0.0,
-            "isFrozen": true,
-            "freezeCount": 3,
-            "hasBoom": false,
-            "hitCount": 3
-        },
-        {
-            "blockType": "Two Way Block_4_7",
+            "blockType": "Two Way Block",
             "gridX": 4,
             "gridY": 7,
             "posX": 0.47368454933166506,
@@ -483,7 +411,31 @@
             "hitCount": 3
         },
         {
-            "blockType": "Arrow Block_3_6",
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 9,
+            "posX": 2.448753595352173,
+            "posY": 3.8975069522857668,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": true,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 9,
+            "posX": 0.8975069522857666,
+            "posY": 3.4487531185150148,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
             "gridX": 3,
             "gridY": 6,
             "posX": -0.1024930477142334,
@@ -492,6 +444,54 @@
             "isFrozen": false,
             "freezeCount": 3,
             "hasBoom": true,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Block 4x4",
+            "gridX": 5,
+            "gridY": 6,
+            "posX": 1.9224379062652588,
+            "posY": 0.9224379658699036,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 0,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 8,
+            "posX": 2.8975069522857668,
+            "posY": 2.448753595352173,
+            "rotationZ": 180.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": true,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Free Move Block",
+            "gridX": 5,
+            "gridY": 8,
+            "posX": 1.4487535953521729,
+            "posY": 2.448753595352173,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 0,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 11,
+            "posX": -3.1024930477142336,
+            "posY": 5.448753356933594,
+            "rotationZ": 0.0,
+            "isFrozen": true,
+            "freezeCount": 3,
+            "hasBoom": false,
             "hitCount": 3
         }
     ],

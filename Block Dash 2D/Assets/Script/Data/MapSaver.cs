@@ -206,6 +206,24 @@ public class MapSaver : MonoBehaviour
             {
                 rawName = rawName.Substring(0, bracketIdx).Trim();
             }
+
+            // Dùng vòng lặp quét và cắt bỏ triệt để toàn bộ các hậu tố _số ở đuôi (ví dụ: ArrowBlock_0_0 -> ArrowBlock)
+            while (true)
+            {
+                int underscoreIdx = rawName.LastIndexOf('_');
+                if (underscoreIdx <= 0) break;
+
+                string possibleSuffix = rawName.Substring(underscoreIdx + 1);
+                if (int.TryParse(possibleSuffix, out _))
+                {
+                    rawName = rawName.Substring(0, underscoreIdx);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
             string typeName = rawName;
 
             Vector2Int gridCoord = WorldToGrid(blockTr.position);

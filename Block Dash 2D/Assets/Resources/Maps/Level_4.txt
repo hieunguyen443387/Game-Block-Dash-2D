@@ -1,0 +1,993 @@
+{
+    "mapName": "Level_4",
+    "rows": 12,
+    "columns": 8,
+    "cellSizePixels": 38.0,
+    "spacingPixels": 0.0,
+    "pixelsPerUnit": 38.0,
+    "startPosX": 0.0,
+    "startPosY": 0.0,
+    "boardCells": [
+        {
+            "x": 0,
+            "y": 0
+        },
+        {
+            "x": 1,
+            "y": 0
+        },
+        {
+            "x": 2,
+            "y": 0
+        },
+        {
+            "x": 3,
+            "y": 0
+        },
+        {
+            "x": 4,
+            "y": 0
+        },
+        {
+            "x": 5,
+            "y": 0
+        },
+        {
+            "x": 6,
+            "y": 0
+        },
+        {
+            "x": 7,
+            "y": 0
+        },
+        {
+            "x": 0,
+            "y": 1
+        },
+        {
+            "x": 1,
+            "y": 1
+        },
+        {
+            "x": 2,
+            "y": 1
+        },
+        {
+            "x": 3,
+            "y": 1
+        },
+        {
+            "x": 4,
+            "y": 1
+        },
+        {
+            "x": 5,
+            "y": 1
+        },
+        {
+            "x": 6,
+            "y": 1
+        },
+        {
+            "x": 7,
+            "y": 1
+        },
+        {
+            "x": 0,
+            "y": 2
+        },
+        {
+            "x": 1,
+            "y": 2
+        },
+        {
+            "x": 2,
+            "y": 2
+        },
+        {
+            "x": 3,
+            "y": 2
+        },
+        {
+            "x": 4,
+            "y": 2
+        },
+        {
+            "x": 5,
+            "y": 2
+        },
+        {
+            "x": 6,
+            "y": 2
+        },
+        {
+            "x": 7,
+            "y": 2
+        },
+        {
+            "x": 0,
+            "y": 3
+        },
+        {
+            "x": 1,
+            "y": 3
+        },
+        {
+            "x": 2,
+            "y": 3
+        },
+        {
+            "x": 3,
+            "y": 3
+        },
+        {
+            "x": 4,
+            "y": 3
+        },
+        {
+            "x": 5,
+            "y": 3
+        },
+        {
+            "x": 6,
+            "y": 3
+        },
+        {
+            "x": 7,
+            "y": 3
+        },
+        {
+            "x": 0,
+            "y": 4
+        },
+        {
+            "x": 1,
+            "y": 4
+        },
+        {
+            "x": 2,
+            "y": 4
+        },
+        {
+            "x": 3,
+            "y": 4
+        },
+        {
+            "x": 4,
+            "y": 4
+        },
+        {
+            "x": 5,
+            "y": 4
+        },
+        {
+            "x": 6,
+            "y": 4
+        },
+        {
+            "x": 7,
+            "y": 4
+        },
+        {
+            "x": 0,
+            "y": 5
+        },
+        {
+            "x": 1,
+            "y": 5
+        },
+        {
+            "x": 2,
+            "y": 5
+        },
+        {
+            "x": 3,
+            "y": 5
+        },
+        {
+            "x": 4,
+            "y": 5
+        },
+        {
+            "x": 5,
+            "y": 5
+        },
+        {
+            "x": 6,
+            "y": 5
+        },
+        {
+            "x": 7,
+            "y": 5
+        },
+        {
+            "x": 0,
+            "y": 6
+        },
+        {
+            "x": 1,
+            "y": 6
+        },
+        {
+            "x": 2,
+            "y": 6
+        },
+        {
+            "x": 3,
+            "y": 6
+        },
+        {
+            "x": 4,
+            "y": 6
+        },
+        {
+            "x": 5,
+            "y": 6
+        },
+        {
+            "x": 6,
+            "y": 6
+        },
+        {
+            "x": 7,
+            "y": 6
+        },
+        {
+            "x": 0,
+            "y": 7
+        },
+        {
+            "x": 1,
+            "y": 7
+        },
+        {
+            "x": 2,
+            "y": 7
+        },
+        {
+            "x": 3,
+            "y": 7
+        },
+        {
+            "x": 4,
+            "y": 7
+        },
+        {
+            "x": 5,
+            "y": 7
+        },
+        {
+            "x": 6,
+            "y": 7
+        },
+        {
+            "x": 7,
+            "y": 7
+        },
+        {
+            "x": 0,
+            "y": 8
+        },
+        {
+            "x": 1,
+            "y": 8
+        },
+        {
+            "x": 2,
+            "y": 8
+        },
+        {
+            "x": 3,
+            "y": 8
+        },
+        {
+            "x": 4,
+            "y": 8
+        },
+        {
+            "x": 5,
+            "y": 8
+        },
+        {
+            "x": 6,
+            "y": 8
+        },
+        {
+            "x": 7,
+            "y": 8
+        },
+        {
+            "x": 0,
+            "y": 9
+        },
+        {
+            "x": 1,
+            "y": 9
+        },
+        {
+            "x": 2,
+            "y": 9
+        },
+        {
+            "x": 3,
+            "y": 9
+        },
+        {
+            "x": 4,
+            "y": 9
+        },
+        {
+            "x": 5,
+            "y": 9
+        },
+        {
+            "x": 6,
+            "y": 9
+        },
+        {
+            "x": 7,
+            "y": 9
+        },
+        {
+            "x": 0,
+            "y": 10
+        },
+        {
+            "x": 1,
+            "y": 10
+        },
+        {
+            "x": 2,
+            "y": 10
+        },
+        {
+            "x": 3,
+            "y": 10
+        },
+        {
+            "x": 4,
+            "y": 10
+        },
+        {
+            "x": 5,
+            "y": 10
+        },
+        {
+            "x": 6,
+            "y": 10
+        },
+        {
+            "x": 7,
+            "y": 10
+        },
+        {
+            "x": 0,
+            "y": 11
+        },
+        {
+            "x": 1,
+            "y": 11
+        },
+        {
+            "x": 2,
+            "y": 11
+        },
+        {
+            "x": 3,
+            "y": 11
+        },
+        {
+            "x": 4,
+            "y": 11
+        },
+        {
+            "x": 5,
+            "y": 11
+        },
+        {
+            "x": 6,
+            "y": 11
+        },
+        {
+            "x": 7,
+            "y": 11
+        }
+    ],
+    "sidelineThickness": 2,
+    "sidelineSizePixels": 38.0,
+    "surroundThickness": 1,
+    "surroundMode": 0,
+    "blocks": [
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 8,
+            "posX": 3.0,
+            "posY": 2.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 9,
+            "posX": -3.0,
+            "posY": 3.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 0,
+            "posX": 2.5,
+            "posY": -5.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 4,
+            "posX": 2.5,
+            "posY": -1.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 0,
+            "posX": -2.0,
+            "posY": -5.5,
+            "rotationZ": 180.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 3,
+            "gridY": 10,
+            "posX": -0.5,
+            "posY": 5.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 1,
+            "gridY": 2,
+            "posX": -2.5,
+            "posY": -3.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 1,
+            "posX": -2.0,
+            "posY": -4.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 2,
+            "posX": 1.0,
+            "posY": -3.5,
+            "rotationZ": 180.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 10,
+            "posX": 0.5,
+            "posY": 4.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 9,
+            "posX": 3.0,
+            "posY": 3.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 10,
+            "posX": -3.0,
+            "posY": 4.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 3,
+            "posX": 1.0,
+            "posY": -2.5,
+            "rotationZ": 180.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 4,
+            "posX": -3.0,
+            "posY": -1.5,
+            "rotationZ": 180.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 8,
+            "posX": -1.5,
+            "posY": 2.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 3,
+            "gridY": 0,
+            "posX": -0.5,
+            "posY": -5.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 3,
+            "gridY": 6,
+            "posX": -0.5,
+            "posY": 1.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 5,
+            "gridY": 8,
+            "posX": 1.5,
+            "posY": 2.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 7,
+            "gridY": 4,
+            "posX": 3.5,
+            "posY": -1.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 5,
+            "gridY": 0,
+            "posX": 1.5,
+            "posY": -5.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 4,
+            "posX": 1.0,
+            "posY": -1.5,
+            "rotationZ": 180.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 11,
+            "posX": -3.0,
+            "posY": 5.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 1,
+            "gridY": 8,
+            "posX": -2.5,
+            "posY": 2.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 8,
+            "posX": -3.5,
+            "posY": 2.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 6,
+            "posX": -2.0,
+            "posY": 0.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 5,
+            "posX": -2.0,
+            "posY": -0.5,
+            "rotationZ": 180.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 10,
+            "posX": 3.0,
+            "posY": 4.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 11,
+            "posX": 3.0,
+            "posY": 5.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 6,
+            "posX": 0.5,
+            "posY": 1.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 9,
+            "posX": -1.0,
+            "posY": 3.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 3,
+            "gridY": 2,
+            "posX": -0.5,
+            "posY": -3.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 2,
+            "posX": 2.5,
+            "posY": -3.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 11,
+            "posX": 1.0,
+            "posY": 5.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 7,
+            "gridY": 6,
+            "posX": 3.5,
+            "posY": 1.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 8,
+            "posX": 0.0,
+            "posY": 2.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 0,
+            "posX": -3.5,
+            "posY": -5.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 4,
+            "posX": -1.0,
+            "posY": -1.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 2,
+            "posX": -1.5,
+            "posY": -3.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 2,
+            "gridY": 10,
+            "posX": -1.5,
+            "posY": 5.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 7,
+            "gridY": 2,
+            "posX": 3.5,
+            "posY": -3.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 5,
+            "gridY": 6,
+            "posX": 1.5,
+            "posY": 0.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 2,
+            "posX": -3.5,
+            "posY": -3.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 0,
+            "posX": 0.5,
+            "posY": -5.0,
+            "rotationZ": 270.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 6,
+            "gridY": 6,
+            "posX": 2.5,
+            "posY": 1.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 5,
+            "gridY": 10,
+            "posX": 1.5,
+            "posY": 4.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 4,
+            "gridY": 5,
+            "posX": 0.0,
+            "posY": -0.5,
+            "rotationZ": 0.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 0,
+            "gridY": 6,
+            "posX": -3.5,
+            "posY": 0.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        },
+        {
+            "blockType": "Arrow Block",
+            "gridX": 7,
+            "gridY": 0,
+            "posX": 3.5,
+            "posY": -5.0,
+            "rotationZ": 90.0,
+            "isFrozen": false,
+            "freezeCount": 3,
+            "hasBoom": false,
+            "hitCount": 3
+        }
+    ],
+    "exitGates": [
+        {
+            "startColumn": 1,
+            "columnSpan": 5,
+            "exitRow": 12,
+            "gateDirection": "Up",
+            "posX": 0.0,
+            "posY": 8.210526466369629,
+            "autoCenter": true,
+            "placement": 0,
+            "extraCellsUp": 0.0,
+            "offsetX": 0.0,
+            "offsetY": 0.0
+        }
+    ]
+}
