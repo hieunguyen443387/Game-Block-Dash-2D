@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using TMPro;
 
@@ -52,6 +53,7 @@ public class GameProgressManager : MonoBehaviour
             CheckWinCondition();
         }
     }
+
     private void UpdateLevelButtonUI()
     {
         if (levelNumberDisplay != null)
@@ -60,9 +62,6 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Nút Play thông thường (tiếp tục phiên chơi hiện tại hoặc load level đang lưu)
-    /// </summary>
     /// <summary>
     /// Nút Play thông thường (tiếp tục phiên chơi hiện tại hoặc load level đang lưu)
     /// </summary>
@@ -84,7 +83,7 @@ public class GameProgressManager : MonoBehaviour
             {
                 mapLoader.levelNumber = currentSession.currentLevel;
                 mapLoader.ClearMap(); // Xóa bàn cờ cũ trước khi load mới
-                mapLoader.LoadLevel(); // ⬅️ Bổ sung gọi lệnh load map tại đây để block được sinh ra!
+                mapLoader.LoadLevel(); // Load map từ LocalLow
             }
         }
 
@@ -93,7 +92,7 @@ public class GameProgressManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Bắt đầu chơi một level cụ thể được chọn (Ví dụ: Chọn thẳng Level 1 từ menu chọn màn).
+    /// Bắt đầu chơi một level cụ thể được chọn (Ví dụ: Chọn thẳng Level từ menu chọn màn).
     /// </summary>
     public void SelectLevelAndPlay(int targetLevel)
     {
@@ -278,9 +277,9 @@ public class GameProgressManager : MonoBehaviour
         // 1. Tăng level lên đúng 1 đơn vị so với level hiện tại
         int nextLevel = currentSession.currentLevel + 1;
 
-        // 2. Kiểm tra xem file map tiếp theo có tồn tại không trong thư mục Resources/Maps
-        TextAsset nextMapTest = Resources.Load<TextAsset>("Maps/Level_" + nextLevel);
-        if (nextMapTest == null)
+        // 2. Kiểm tra xem file map tiếp theo có tồn tại không trong thư mục persistentDataPath/Levels
+        string nextMapPath = Path.Combine(Application.persistentDataPath, "Levels", "Level_" + nextLevel + ".txt");
+        if (!File.Exists(nextMapPath))
         {
             // Nếu đã hết map (đạt màn cuối), giữ nguyên ở level hiện tại (hoặc lặp lại màn cuối)
             nextLevel = currentSession.currentLevel; 
@@ -308,7 +307,7 @@ public class GameProgressManager : MonoBehaviour
         if (mapLoader != null)
         {
             mapLoader.levelNumber = currentSession.currentLevel;
-            mapLoader.LoadLevel(); // Load map của level mới
+            mapLoader.LoadLevel(); // Load map của level mới từ AppData
         }
 
         isPlaying = true;
