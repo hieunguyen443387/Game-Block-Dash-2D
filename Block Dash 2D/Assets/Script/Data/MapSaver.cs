@@ -207,7 +207,6 @@ public class MapSaver : MonoBehaviour
                 rawName = rawName.Substring(0, bracketIdx).Trim();
             }
 
-            // Dùng vòng lặp quét và cắt bỏ triệt để toàn bộ các hậu tố _số ở đuôi (ví dụ: ArrowBlock_0_0 -> ArrowBlock)
             while (true)
             {
                 int underscoreIdx = rawName.LastIndexOf('_');
@@ -225,10 +224,8 @@ public class MapSaver : MonoBehaviour
             }
 
             string typeName = rawName;
-
             Vector2Int gridCoord = WorldToGrid(blockTr.position);
 
-            // Quét trạng thái đóng băng (Freeze)
             bool isBlockFrozen = false;
             int freezeCount = 0;
             FreezableBlock freezable = item.GetComponent<FreezableBlock>();
@@ -246,7 +243,6 @@ public class MapSaver : MonoBehaviour
                 }
             }
 
-            // Quét trạng thái Boom (HitCountdownBoomBlock)
             bool hasBoom = false;
             int hitCount = 3;
             HitCountdownBoomBlock boom = item.GetComponent<HitCountdownBoomBlock>();
@@ -275,7 +271,8 @@ public class MapSaver : MonoBehaviour
 
         string json = JsonUtility.ToJson(mapData, true);
 
-        string folderPath = Path.Combine(Application.dataPath, "Resources", "Maps");
+        // 🛠️ Lưu trực tiếp vào thư mục Levels trong AppData\LocalLow\[Company]\[Product]
+        string folderPath = Path.Combine(Application.persistentDataPath, "Levels");
         if (!Directory.Exists(folderPath))
         {
             Directory.CreateDirectory(folderPath);
@@ -288,7 +285,7 @@ public class MapSaver : MonoBehaviour
         AssetDatabase.Refresh();
 #endif
 
-        Debug.Log($"<color=green>LƯU MAP THÀNH CÔNG!</color> Level {levelNumber} đã lưu: {mapData.blocks.Count} blocks vào file: {filePath}");
+        Debug.Log($"<color=green>LƯU MAP THÀNH CÔNG!</color> Level {levelNumber} đã lưu tại: {filePath}");
     }
 
     public Vector2 GridToWorld(int col, int row)
@@ -340,7 +337,7 @@ public class MapSaverEditor : Editor
         MapSaver saver = (MapSaver)target;
 
         EditorGUILayout.Space(5);
-        EditorGUILayout.HelpBox("Nhập số Level và nhấn nút Save để tự động quét Board, ExitGate và toàn bộ Block trong Scene ra file .txt.", MessageType.Info);
+        EditorGUILayout.HelpBox("Nhập số Level và nhấn nút Save để tự động quét Board, ExitGate và toàn bộ Block trong Scene ra file .txt vào AppData\\LocalLow.", MessageType.Info);
 
         DrawDefaultInspector();
 

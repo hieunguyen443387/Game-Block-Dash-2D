@@ -13,7 +13,7 @@ public class MapLoader : MonoBehaviour
     public int levelNumber = 1;
 
     [Header("Max Level Auto Detection (Chỉ đọc)")]
-    [Tooltip("Cấp độ cao nhất được tự động quét trong thư mục Resources/Maps")]
+    [Tooltip("Cấp độ cao nhất được tự động quét trong thư mục LocalLow/Levels")]
     [SerializeField] private int maxAvailableLevel = 1;
 
     [Header("Block Palette (Bảng tra cứu Prefab)")]
@@ -60,16 +60,21 @@ public class MapLoader : MonoBehaviour
         AutoDetectMaxLevel();
     }
 
+    /// <summary>
+    /// Tự động quét thư mục persistentDataPath/Levels để tìm level có số thứ tự lớn nhất
+    /// </summary>
     public void AutoDetectMaxLevel()
     {
-        TextAsset[] allMaps = Resources.LoadAll<TextAsset>("Maps");
+        string folderPath = Path.Combine(Application.persistentDataPath, "Levels");
         int highestLevel = 1;
 
-        foreach (var map in allMaps)
+        if (Directory.Exists(folderPath))
         {
-            if (map != null && map.name.StartsWith("Level_"))
+            string[] files = Directory.GetFiles(folderPath, "Level_*.txt");
+            foreach (var file in files)
             {
-                string levelStr = map.name.Replace("Level_", "");
+                string fileName = Path.GetFileNameWithoutExtension(file); // Ví dụ: Level_1, Level_2
+                string levelStr = fileName.Replace("Level_", "");
                 if (int.TryParse(levelStr, out int lvlNum))
                 {
                     if (lvlNum > highestLevel)
@@ -167,14 +172,17 @@ public class MapLoader : MonoBehaviour
         string targetMapName = "Level_" + levelNumber;
         BuildPaletteDictionary();
 
-        TextAsset textAsset = Resources.Load<TextAsset>("Maps/" + targetMapName);
-        if (textAsset == null)
+        string folderPath = Path.Combine(Application.persistentDataPath, "Levels");
+        string filePath = Path.Combine(folderPath, targetMapName + ".txt");
+
+        if (!File.Exists(filePath))
         {
-            Debug.LogError($"<color=red>KHÔNG TÌM THẤY MAP:</color> Resources/Maps/{targetMapName}.txt");
+            Debug.LogError($"<color=red>KHÔNG TÌM THẤY MAP:</color> {filePath}");
             return;
         }
 
-        MapData mapData = JsonUtility.FromJson<MapData>(textAsset.text);
+        string json = File.ReadAllText(filePath);
+        MapData mapData = JsonUtility.FromJson<MapData>(json);
         if (mapData == null)
         {
             Debug.LogError("Dữ liệu file map bị lỗi định dạng!");
@@ -204,14 +212,17 @@ public class MapLoader : MonoBehaviour
         string targetMapName = "Level_" + levelNumber;
         BuildPaletteDictionary();
 
-        TextAsset textAsset = Resources.Load<TextAsset>("Maps/" + targetMapName);
-        if (textAsset == null)
+        string folderPath = Path.Combine(Application.persistentDataPath, "Levels");
+        string filePath = Path.Combine(folderPath, targetMapName + ".txt");
+
+        if (!File.Exists(filePath))
         {
-            Debug.LogError($"<color=red>KHÔNG TÌM THẤY MAP:</color> Resources/Maps/{targetMapName}.txt");
+            Debug.LogError($"<color=red>KHÔNG TÌM THẤY MAP:</color> {filePath}");
             return;
         }
 
-        MapData mapData = JsonUtility.FromJson<MapData>(textAsset.text);
+        string json = File.ReadAllText(filePath);
+        MapData mapData = JsonUtility.FromJson<MapData>(json);
         if (mapData == null)
         {
             Debug.LogError("Dữ liệu file map bị lỗi định dạng!");
@@ -310,7 +321,7 @@ public class MapLoader : MonoBehaviour
             }
         }
 
-        Debug.Log($"<color=green>LOAD LEVEL {levelNumber} THÀNH CÔNG!</color> Đã tái tạo Board, Surround, {spawnedCount}/{mapData.blocks.Count} blocks và {mapData.exitGates.Count} cổng thoát.");
+        Debug.Log($"<color=green>LOAD LEVEL {levelNumber} THÀNH CÔNG!</color> Đã tái tạo Board, Surround, {spawnedCount}/{mapData.blocks.Count} blocks và {mapData.exitGates.Count} cổng thoát từ AppData.");
     }
 
     private void RebuildBoardAndSurround(MapData mapData)
@@ -559,7 +570,6 @@ public class MapLoader : MonoBehaviour
     [ContextMenu("Clear Blocks Only")]
     public void ClearMap()
     {
-        // 1. Xóa các block nằm trong container của MapLoader
         Transform container = (blocksContainer != null) ? blocksContainer : transform;
         for (int i = container.childCount - 1; i >= 0; i--)
         {
@@ -574,7 +584,6 @@ public class MapLoader : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        // 2. Tự động tìm và gọi xóa trên BlockSpawner nếu có trong Scene
 #if UNITY_2023_1_OR_NEWER
         BlockSpawner spawner = FindFirstObjectByType<BlockSpawner>();
 #else
@@ -585,7 +594,6 @@ public class MapLoader : MonoBehaviour
             spawner.ClearAllBlocks();
         }
 
-        // 3. Quét và tiêu diệt tất cả các BlockItem còn sót lại bất kỳ đâu trong Scene
 #if UNITY_2023_1_OR_NEWER
         BlockItem[] remainingBlocks = FindObjectsByType<BlockItem>(FindObjectsSortMode.None);
 #else
@@ -619,7 +627,7 @@ public class MapLoaderEditor : Editor
         MapLoader loader = (MapLoader)target;
 
         EditorGUILayout.Space(5);
-        EditorGUILayout.HelpBox("Tự động quét thư mục Resources/Maps để xác định giới hạn level tối đa!", MessageType.Info);
+        EditorGUILayout.HelpBox("Tự động quét thư mục AppData\\LocalLow\\Levels để tải map!", MessageType.Info);
 
         DrawDefaultInspector();
 
@@ -633,7 +641,7 @@ public class MapLoaderEditor : Editor
         }
 
         // Nút Clear Blocks Only (Đồng bộ toàn diện)
-        EditorGUILayout.Space(5);
+        EditorGUILayout.Space(-2);
         GUI.backgroundColor = new Color(1f, 0.4f, 0.4f);
         if (GUILayout.Button("🗑️ CLEAR BLOCKS ONLY (Xóa tất cả block)", GUILayout.Height(35)))
         {
