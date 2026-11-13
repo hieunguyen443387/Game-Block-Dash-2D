@@ -28,7 +28,7 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
     public bool autoDetectBoard = true;
 
     [Tooltip("Kích thước mỗi ô Cell theo pixel (đồng bộ với Board: 36px)")]
-    public float cellSizePixels = 36f;
+    public float cellSizePixels = 38f;
 
     [Tooltip("Khoảng cách giữa các ô theo pixel (0px)")]
     public float spacingPixels = 0f;

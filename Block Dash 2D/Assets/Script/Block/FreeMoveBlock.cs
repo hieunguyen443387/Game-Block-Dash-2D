@@ -137,29 +137,48 @@ public class FreeMoveBlock : MovableBlockBase
     // OBSTACLE CHECK
     // =========================================================
 
+    
     private bool IsBlocked(Vector2Int cell)
     {
         if (!IsInsideBoard(cell)) return true;
 
         float step = GetStepSize();
         Vector2 worldPosition = GridToWorld(cell);
-        
-        // Thu nhỏ vùng quét một chút (0.6 thay vì 0.75) để tránh quét phạm sang ô bên cạnh của chính nó
-        Vector2 boxSize = Vector2.one * step * 0.6f;
 
-        // Lấy tất cả các collider tại ô này thuộc obstacleLayers
-        Collider2D[] hits = Physics2D.OverlapBoxAll(worldPosition, boxSize, 0f, obstacleLayers);
+        Vector2 boxSize = Vector2.one * step * 0.85f;
+
+        Collider2D[] hits = Physics2D.OverlapBoxAll(
+            worldPosition,
+            boxSize,
+            0f,
+            obstacleLayers
+        );
 
         foreach (Collider2D hit in hits)
         {
             if (hit == null) continue;
+
             if (ignoreTriggers && hit.isTrigger) continue;
 
-            // Bỏ qua chính bản thân block này (so sánh cả collider cá nhân và toàn bộ cụm transform gốc)
-            if (hit == myCollider || hit.transform == transform || hit.transform.root == transform.root) continue;
+            // Chỉ bỏ qua collider thuộc chính block này.
+            // Không bỏ qua các block khác dù chúng chung GameObject cha.
+            bool isSelf =
+                hit == myCollider ||
+                hit.transform == transform ||
+                hit.transform.IsChildOf(transform);
 
-            // Nếu chạm phải bất kỳ Collider hợp lệ nào khác -> Ô này bị chặn
-            return	true;
+            if (isSelf) continue;
+
+            Log($"Ô ({cell.x},{cell.y}) bị chặn bởi: {hit.name}");
+
+            Debug.DrawLine(
+                worldPosition + Vector2.left * 0.2f,
+                worldPosition + Vector2.right * 0.2f,
+                Color.red,
+                0.5f
+            );
+
+            return true;
         }
 
         return false;

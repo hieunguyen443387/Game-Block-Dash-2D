@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4959558885547517268}
   - component: {fileID: 7886710988793655423}
   - component: {fileID: 837074351844723357}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Block4x4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -155,30 +155,29 @@ MonoBehaviour:
   blockType: ArrowBlock
   gridX: 0
   gridY: 0
+  autoDetectBoard: 1
+  cellSizePixels: 36
+  spacingPixels: 0
+  pixelsPerUnit: 100
+  boardColumns: 12
+  boardRows: 12
+  boardCenter: {x: 0, y: 0}
+  sidelineLanePosition: 0
+  borderThickness: 2
+  customLaneDistance: 0.38
+  sidelineMoveSpeed: 16
+  cornerTurnDuration: 0.08
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  ignoreTriggers: 1
   direction: 1
   autoSyncRotation: 1
   rotationOffset: 0
   moveSpeed: 14
   playImpactBounce: 1
   playBlockedShake: 1
-  autoDetectBoard: 1
-  cellSizePixels: 36
-  spacingPixels: 0
-  pixelsPerUnit: 100
-  clampToBoardBounds: 1
-  boardColumns: 12
-  boardRows: 12
-  obstacleLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  ignoreTriggers: 1
   navigateSidelineToExit: 1
-  sidelineLanePosition: 0
-  borderThickness: 2
-  customLaneDistance: 0.38
-  sidelineMoveSpeed: 16
-  cornerTurnDuration: 0.08
-  boardCenter: {x: 0, y: 0}
   onMoveStart:
     m_PersistentCalls:
       m_Calls: []
