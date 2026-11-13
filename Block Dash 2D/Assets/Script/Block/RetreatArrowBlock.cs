@@ -1,11 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.EventSystems;
-
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -13,7 +8,7 @@ using UnityEditor;
 
 [SelectionBase]
 [RequireComponent(typeof(Collider2D))]
-public class RetreatArrowBlock : BlockItem, IPointerDownHandler
+public class RetreatArrowBlock : MovableBlockBase
 {
     [Header("1. Cấu hình Hướng di chuyển")]
     [Tooltip("Hướng di chuyển của Block theo mũi tên")]
@@ -35,27 +30,9 @@ public class RetreatArrowBlock : BlockItem, IPointerDownHandler
     [Tooltip("Hiệu ứng rung nhẹ khi bị kẹt ngay ô đầu tiên")]
     public bool playBlockedShake = true;
 
-    [Header("3. Bàn cờ & Grid Settings")]
-    public bool autoDetectBoard = true;
-    public float cellSizePixels = 36f;
-    public float spacingPixels = 0f;
-    public float pixelsPerUnit = 100f;
-    public int boardColumns = 12;
-    public int boardRows = 12;
-
-    [Header("4. Phát hiện Vật cản (Collision)")]
-    public LayerMask obstacleLayers = ~0;
-    public bool ignoreTriggers = true;
-
     [Header("5. Di chuyển dọc Sideline ra Cổng thoát")]
     [Tooltip("Nếu đường thông thoáng ra ngoài biên, block vẫn có thể đi ra cổng thoát bình thường")]
     public bool navigateSidelineToExit = true;
-    public SidelineLanePosition sidelineLanePosition = SidelineLanePosition.CenterOfSideline;
-    public int borderThickness = 2;
-    public float customLaneDistance = 0.38f;
-    public float sidelineMoveSpeed = 16f;
-    public float cornerTurnDuration = 0.08f;
-    [HideInInspector] public Vector2 boardCenter = Vector2.zero;
 
     [Header("6. Sự kiện (Unity Events)")]
     public UnityEvent onMoveStart;
@@ -65,170 +42,28 @@ public class RetreatArrowBlock : BlockItem, IPointerDownHandler
 
     // Trạng thái runtime
     private bool isMoving = false;
-    private Collider2D myCollider;
-    private int lastClickFrame = -1;
 
     [SerializeField, HideInInspector] private ArrowDirection lastDirection = ArrowDirection.Right;
     [SerializeField, HideInInspector] private float lastRotationZ = 0f;
 
     public bool IsMoving => isMoving;
 
-    private void Awake()
+    protected override void Awake()
     {
-        myCollider = GetComponent<Collider2D>();
+        base.Awake();
         if (string.IsNullOrEmpty(blockType))
-        {
             blockType = "RetreatArrowBlock";
-        }
     }
 
-    private void Start()
+    protected override void Start()
     {
-        if (autoDetectBoard)
-        {
-            DetectBoardSettings();
-        }
+        base.Start(); // gọi DetectBoardSettings nếu autoDetectBoard
         SyncDirectionFromRotation();
     }
 
-    public void OnPointerDown(PointerEventData eventData)
+    protected override void OnBlockClicked()
     {
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
-        {
-            BoosterController.Instance.OnBlockClicked(this);
-            return;
-        }
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
         TriggerMove();
-    }
-
-    private void Update()
-    {
-#if ENABLE_INPUT_SYSTEM
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            CheckClickAtScreenPosition(Mouse.current.position.ReadValue());
-        }
-        else if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
-        {
-            CheckClickAtScreenPosition(Touchscreen.current.primaryTouch.position.ReadValue());
-        }
-#elif ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetMouseButtonDown(0))
-        {
-            CheckClickAtScreenPosition(Input.mousePosition);
-        }
-#endif
-    }
-
-    private void CheckClickAtScreenPosition(Vector2 screenPosition)
-    {
-        if (Time.frameCount == lastClickFrame) return;
-
-        Camera cam = Camera.main;
-        if (cam != null && myCollider != null)
-        {
-            Vector2 mouseWorld = cam.ScreenToWorldPoint(screenPosition);
-            if (myCollider.OverlapPoint(mouseWorld))
-            {
-                if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
-                {
-                    BoosterController.Instance.OnBlockClicked(this);
-                    return;
-                }
-
-                lastClickFrame = Time.frameCount;
-                TriggerMove();
-            }
-        }
-    }
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-    private void OnMouseDown()
-    {
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
-        {
-            BoosterController.Instance.OnBlockClicked(this);
-            return;
-        }
-
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
-        TriggerMove();
-    }
-#endif
-
-    public void DetectBoardSettings()
-    {
-#if UNITY_2023_1_OR_NEWER
-        SideLine sideline = FindFirstObjectByType<SideLine>();
-#else
-        SideLine sideline = FindObjectOfType<SideLine>();
-#endif
-        if (sideline != null)
-        {
-            boardCenter = sideline.startPosition;
-            boardRows = sideline.rows;
-            boardColumns = sideline.columns;
-            cellSizePixels = sideline.cellSizePixels;
-            spacingPixels = sideline.spacingPixels;
-            pixelsPerUnit = sideline.pixelsPerUnit;
-            if (sideline.borderThickness > 0) borderThickness = sideline.borderThickness;
-            return;
-        }
-
-#if UNITY_2023_1_OR_NEWER
-        ExitGateGenerator gateGen = FindFirstObjectByType<ExitGateGenerator>();
-#else
-        ExitGateGenerator gateGen = FindObjectOfType<ExitGateGenerator>();
-#endif
-        if (gateGen != null)
-        {
-            boardCenter = gateGen.startPosition;
-            boardRows = gateGen.rows;
-            boardColumns = gateGen.columns;
-            cellSizePixels = gateGen.cellSizePixels;
-            spacingPixels = gateGen.spacingPixels;
-            pixelsPerUnit = gateGen.pixelsPerUnit;
-            if (gateGen.borderThickness > 0) borderThickness = gateGen.borderThickness;
-            return;
-        }
-
-#if UNITY_2023_1_OR_NEWER
-        BoardGenerator boardGen = FindFirstObjectByType<BoardGenerator>();
-#else
-        BoardGenerator boardGen = FindObjectOfType<BoardGenerator>();
-#endif
-        if (boardGen != null)
-        {
-            boardCenter = boardGen.startPosition;
-            boardRows = boardGen.rows;
-            boardColumns = boardGen.columns;
-            cellSizePixels = boardGen.cellSizePixels;
-            spacingPixels = boardGen.spacingPixels;
-            pixelsPerUnit = boardGen.pixelsPerUnit;
-            return;
-        }
-    }
-
-    public float GetStepSize()
-    {
-        float ppu = (pixelsPerUnit > 0) ? pixelsPerUnit : 100f;
-        return (cellSizePixels + spacingPixels) / ppu;
-    }
-
-    public float GetSidelineLaneDistance()
-    {
-        float stepSize = GetStepSize();
-        int thickness = Mathf.Max(1, borderThickness);
-        switch (sidelineLanePosition)
-        {
-            case SidelineLanePosition.CenterOfSideline: return (thickness * stepSize) / 2f;
-            case SidelineLanePosition.OuterRowOfSideline: return (thickness - 0.5f) * stepSize;
-            case SidelineLanePosition.CustomDistance: return (customLaneDistance > 0f) ? customLaneDistance : (thickness * stepSize) / 2f;
-            default: return (thickness * stepSize) / 2f;
-        }
     }
 
     public Vector2 GetDirectionVector()
@@ -465,8 +300,7 @@ public class RetreatArrowBlock : BlockItem, IPointerDownHandler
     private IEnumerator NavigateAlongSidelineToGate(ExitGate exitGate, Vector2 initialLaneExitPos)
     {
         isMoving = true;
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        if (sr != null && sr.sortingOrder < 5) sr.sortingOrder = 5;
+        EnsureTopSortingOrder();
         if (myCollider != null) myCollider.enabled = false;
 
         float stepSize = GetStepSize();
@@ -566,54 +400,6 @@ public class RetreatArrowBlock : BlockItem, IPointerDownHandler
         onMoveFinished?.Invoke();
         yield return StartCoroutine(exitGate.PlayExitAnimationRoutine(this));
         isMoving = false;
-    }
-
-    private IEnumerator SmoothRotateTo(float targetAngleZ, float duration)
-    {
-        float startAngleZ = transform.eulerAngles.z;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            transform.rotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(startAngleZ, targetAngleZ, t));
-            yield return null;
-        }
-        transform.rotation = Quaternion.Euler(0f, 0f, targetAngleZ);
-    }
-
-    private IEnumerator SmoothMoveTo(Vector3 targetPos, float speed)
-    {
-        while (Vector3.Distance(transform.position, targetPos) > 0.005f)
-        {
-            transform.position = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime);
-            yield return null;
-        }
-        transform.position = targetPos;
-    }
-
-    private IEnumerator ShakeRoutine(Vector2 dir, float shakeDistance)
-    {
-        Vector3 basePos = transform.position;
-        Vector3 bumpPos = basePos + (Vector3)(dir * shakeDistance);
-        float duration = 0.05f;
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            transform.position = Vector3.Lerp(basePos, bumpPos, elapsed / duration);
-            yield return null;
-        }
-
-        elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            transform.position = Vector3.Lerp(bumpPos, basePos, elapsed / duration);
-            yield return null;
-        }
-        transform.position = basePos;
     }
 
 #if UNITY_EDITOR

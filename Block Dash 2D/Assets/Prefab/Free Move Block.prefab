@@ -155,8 +155,6 @@ MonoBehaviour:
   blockType: 
   gridX: 0
   gridY: 0
-  moveSpeed: 8
-  sidelineMoveSpeed: 16
   autoDetectBoard: 1
   cellSizePixels: 36
   spacingPixels: 0
@@ -164,13 +162,16 @@ MonoBehaviour:
   boardColumns: 12
   boardRows: 12
   boardCenter: {x: 0, y: 0}
+  sidelineLanePosition: 0
+  borderThickness: 2
+  customLaneDistance: 0.38
+  sidelineMoveSpeed: 16
+  cornerTurnDuration: 0.08
   obstacleLayers:
     serializedVersion: 2
     m_Bits: 64
-  ignoreTriggers: 1
-  borderThickness: 2
-  exitDistance: 0.5
-  cornerTurnDuration: 0.08
+  ignoreTriggers: 0
+  moveSpeed: 8
   showDebugLogs: 1
 --- !u!114 &5795034898393322960
 MonoBehaviour:
@@ -185,5 +186,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlockSnapToGrid
   boardTransform: {fileID: 0}
-  cellSize: 1
   positionOffset: {x: 0, y: 0}

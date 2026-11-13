@@ -1,11 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.EventSystems;
-
-#if ENABLE_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -19,21 +14,9 @@ public enum ArrowDirection
     Down = 3    // Xoay 270° -> Di chuyển Xuống Dưới (-Y)
 }
 
-public enum SidelineLanePosition
-{
-    [Tooltip("Căn CHÍNH GIỮA dải viền Sideline (Mặc định: cách đều mép bàn cờ và mép ngoài = borderThickness * stepSize / 2)")]
-    CenterOfSideline = 0,
-
-    [Tooltip("Nằm ở HÀNG NGOÀI CÙNG của Sideline (Lớp ngoài cùng = (borderThickness - 0.5) * stepSize)")]
-    OuterRowOfSideline = 1,
-
-    [Tooltip("Khoảng cách tùy chỉnh nhập tay (theo giá trị customLaneDistance)")]
-    CustomDistance = 2
-}
-
 [SelectionBase]
 [RequireComponent(typeof(Collider2D))]
-public class ArrowBlock : BlockItem, IPointerDownHandler
+public class ArrowBlock : MovableBlockBase
 {
     [Header("1. Cấu hình Hướng di chuyển")]
     [Tooltip("Hướng di chuyển của Block theo mũi tên")]
@@ -56,58 +39,18 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
     public bool playBlockedShake = true;
 
     [Header("3. Bàn cờ & Grid Settings")]
-    [Tooltip("Tự động tìm kiếm thông số Bàn cờ từ BoardGenerator hoặc MapSaver trong Scene")]
-    public bool autoDetectBoard = true;
+    // (Các thông số bàn cờ được kế thừa từ MovableBlockBase)
 
-    [Tooltip("Kích thước mỗi ô Cell theo pixel (đồng bộ với Board: 36px)")]
-    public float cellSizePixels = 36f;
-
-    [Tooltip("Khoảng cách giữa các ô theo pixel (0px)")]
-    public float spacingPixels = 0f;
-
-    [Tooltip("Pixels Per Unit (100)")]
-    public float pixelsPerUnit = 100f;
-
-    [Tooltip("Chặn block dừng lại khi chạm tới mép ngoài cùng của Bàn cờ")]
-    public bool clampToBoardBounds = true;
-    public int boardColumns = 12;
-    public int boardRows = 12;
-
-    [Header("4. Phát hiện Vật cản (Collision)")]
-    [Tooltip("LayerMask các vật thể được coi là vật cản chặn đường (Default, Block, Border...)")]
-    public LayerMask obstacleLayers = ~0; // Mặc định quét mọi Layer
-
-    [Tooltip("Bỏ qua các Collider dạng Trigger (chỉ bị chặn bởi Collider cứng)")]
-    public bool ignoreTriggers = true;
-
-    [Header("5. Di chuyển dọc Sideline ra Cổng thoát")]
+    [Header("4. Di chuyển dọc Sideline ra Cổng thoát")]
     [Tooltip("Khi ra khỏi bàn cờ, khối block sẽ đi dọc theo đường viền Sideline để tìm đến Cổng thoát")]
     public bool navigateSidelineToExit = true;
 
-    [Tooltip("Vị trí làn di chuyển trên Sideline:\n- CenterOfSideline: Căn chính giữa viền Sideline (cách đều mép bàn cờ và mép ngoài)\n- OuterRowOfSideline: Căn ở hàng ngoài cùng của Sideline\n- CustomDistance: Tự chỉnh khoảng cách")]
-    public SidelineLanePosition sidelineLanePosition = SidelineLanePosition.CenterOfSideline;
-
-    [Tooltip("Độ dày đường viền Sideline (số lớp ô bao quanh, mặc định: 2)")]
-    public int borderThickness = 2;
-
-    [Tooltip("Khoảng cách tùy chỉnh từ mép bàn cờ ra tâm làn Sideline (Unity Units, chỉ áp dụng khi chọn CustomDistance)")]
-    public float customLaneDistance = 0.38f;
-
-    [Tooltip("Tốc độ di chuyển dọc theo viền Sideline")]
-    public float sidelineMoveSpeed = 16f;
-
-    [Tooltip("Thời gian xoay góc khi đổi hướng ở các góc viền (giây)")]
-    public float cornerTurnDuration = 0.08f;
-
-    [Tooltip("Tọa độ tâm bàn cờ")]
-    [HideInInspector] public Vector2 boardCenter = Vector2.zero;
-
-    [Header("6. Sự kiện (Unity Events)")]
+    [Header("5. Sự kiện (Unity Events)")]
     public UnityEvent onMoveStart;
     public UnityEvent onMoveFinished;
     public UnityEvent onBlocked;
 
-    [Header("7. Đóng băng (Freeze)")]
+    [Header("6. Đóng băng (Freeze)")]
     [Tooltip("Tham chiếu tới FreezableBlock (nếu để trống sẽ tự động tìm trên cùng GameObject)")]
     public FreezableBlock freezableBlock;
 
@@ -128,227 +71,30 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
 
     // Trạng thái runtime
     private bool isMoving = false;
-    private Collider2D myCollider;
-    private int lastClickFrame = -1;
 
     [SerializeField, HideInInspector] private ArrowDirection lastDirection = ArrowDirection.Right;
     [SerializeField, HideInInspector] private float lastRotationZ = 0f;
 
     public bool IsMoving => isMoving;
 
-    private void Awake()
+    protected override void Awake()
     {
-        myCollider = GetComponent<Collider2D>();
-
+        base.Awake(); // khởi tạo myCollider
         if (freezableBlock == null)
-        {
             freezableBlock = GetComponent<FreezableBlock>();
-        }
-
-        // Mặc định định danh loại block nếu chưa đặt
         if (string.IsNullOrEmpty(blockType))
-        {
             blockType = "ArrowBlock";
-        }
     }
 
-    private void Start()
+    protected override void Start()
     {
-        if (autoDetectBoard)
-        {
-            DetectBoardSettings();
-        }
-
-        // Cập nhật hướng di chuyển theo góc xoay thực tế khi load vào Scene
+        base.Start(); // gọi DetectBoardSettings nếu autoDetectBoard
         SyncDirectionFromRotation();
     }
 
-    // Hỗ trợ Unity EventSystem (UI / 2D Physics Raycaster)
-    public void OnPointerDown(PointerEventData eventData)
+    protected override void OnBlockClicked()
     {
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
-        {
-            BoosterController.Instance.OnBlockClicked(this);
-            return;
-        }
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
         TriggerMove();
-    }
-
-    private void Update()
-    {
-#if ENABLE_INPUT_SYSTEM
-        // Hỗ trợ New Input System Package
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            CheckClickAtScreenPosition(Mouse.current.position.ReadValue());
-        }
-        else if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
-        {
-            CheckClickAtScreenPosition(Touchscreen.current.primaryTouch.position.ReadValue());
-        }
-#elif ENABLE_LEGACY_INPUT_MANAGER
-        // Hỗ trợ Legacy Input Manager
-        if (Input.GetMouseButtonDown(0))
-        {
-            CheckClickAtScreenPosition(Input.mousePosition);
-        }
-#endif
-    }
-
-    private void CheckClickAtScreenPosition(Vector2 screenPosition)
-    {
-        if (Time.frameCount == lastClickFrame) return;
-
-        Camera cam = Camera.main;
-        if (cam != null && myCollider != null)
-        {
-            Vector2 mouseWorld = cam.ScreenToWorldPoint(screenPosition);
-            if (myCollider.OverlapPoint(mouseWorld))
-            {
-                // Nếu đang dùng booster, gọi booster xử lý rồi dừng lại
-                if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
-                {
-                    BoosterController.Instance.OnBlockClicked(this);
-                    return;
-                }
-
-                lastClickFrame = Time.frameCount;
-                TriggerMove();
-            }
-        }
-    }
-
-#if ENABLE_LEGACY_INPUT_MANAGER
-    // Sự kiện click chuẩn của Unity Legacy Input
-    private void OnMouseDown()
-    {
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
-        {
-            BoosterController.Instance.OnBlockClicked(this);
-            return;
-        }
-
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
-        TriggerMove();
-    }
-#endif
-
-    /// <summary>
-    /// Tự động lấy thông số bàn cờ từ các script đã có trong Scene
-    /// </summary>
-    public void DetectBoardSettings()
-    {
-#if UNITY_2023_1_OR_NEWER
-        SideLine sideline = FindFirstObjectByType<SideLine>();
-#else
-        SideLine sideline = FindObjectOfType<SideLine>();
-#endif
-        if (sideline != null)
-        {
-            boardCenter = sideline.startPosition;
-            boardRows = sideline.rows;
-            boardColumns = sideline.columns;
-            cellSizePixels = sideline.cellSizePixels;
-            spacingPixels = sideline.spacingPixels;
-            pixelsPerUnit = sideline.pixelsPerUnit;
-            if (sideline.borderThickness > 0)
-            {
-                borderThickness = sideline.borderThickness;
-            }
-            return;
-        }
-
-#if UNITY_2023_1_OR_NEWER
-        ExitGateGenerator gateGen = FindFirstObjectByType<ExitGateGenerator>();
-#else
-        ExitGateGenerator gateGen = FindObjectOfType<ExitGateGenerator>();
-#endif
-        if (gateGen != null)
-        {
-            boardCenter = gateGen.startPosition;
-            boardRows = gateGen.rows;
-            boardColumns = gateGen.columns;
-            cellSizePixels = gateGen.cellSizePixels;
-            spacingPixels = gateGen.spacingPixels;
-            pixelsPerUnit = gateGen.pixelsPerUnit;
-            if (gateGen.borderThickness > 0)
-            {
-                borderThickness = gateGen.borderThickness;
-            }
-            return;
-        }
-
-#if UNITY_2023_1_OR_NEWER
-        BoardGenerator boardGen = FindFirstObjectByType<BoardGenerator>();
-#else
-        BoardGenerator boardGen = FindObjectOfType<BoardGenerator>();
-#endif
-        if (boardGen != null)
-        {
-            boardCenter = boardGen.startPosition;
-            boardRows = boardGen.rows;
-            boardColumns = boardGen.columns;
-            cellSizePixels = boardGen.cellSizePixels;
-            spacingPixels = boardGen.spacingPixels;
-            pixelsPerUnit = boardGen.pixelsPerUnit;
-            return;
-        }
-
-#if UNITY_2023_1_OR_NEWER
-        MapSaver saver = FindFirstObjectByType<MapSaver>();
-#else
-        MapSaver saver = FindObjectOfType<MapSaver>();
-#endif
-        if (saver != null)
-        {
-            boardCenter = saver.startPosition;
-            boardRows = saver.rows;
-            boardColumns = saver.columns;
-            cellSizePixels = saver.cellSizePixels;
-            spacingPixels = saver.spacingPixels;
-            pixelsPerUnit = saver.pixelsPerUnit;
-        }
-    }
-
-    /// <summary>
-    /// Lấy kích thước 1 ô cờ theo đơn vị Unity (World Units)
-    /// </summary>
-    public float GetStepSize()
-    {
-        float ppu = (pixelsPerUnit > 0) ? pixelsPerUnit : 100f;
-        return (cellSizePixels + spacingPixels) / ppu;
-    }
-
-    /// <summary>
-    /// Lấy khoảng cách từ mép bàn cờ ra tâm làn di chuyển trên Sideline (World Units)
-    /// </summary>
-    public float GetSidelineLaneDistance()
-    {
-        float stepSize = GetStepSize();
-        int thickness = Mathf.Max(1, borderThickness);
-
-        switch (sidelineLanePosition)
-        {
-            case SidelineLanePosition.CenterOfSideline:
-                // Căn chính giữa dải viền Sideline
-                // Ví dụ: thickness = 2 -> giữa viền = 2 * stepSize / 2f = 1.0 * stepSize
-                // Khối block sẽ nằm lọt thỏm chính giữa dải viền, cách đều cả mép bàn cờ và mép ngoài
-                return (thickness * stepSize) / 2f;
-
-            case SidelineLanePosition.OuterRowOfSideline:
-                // Căn ở hàng ngoài cùng của Sideline (Lớp ngoài cùng)
-                // Ví dụ: thickness = 2 -> hàng 2 = (2 - 0.5f) * stepSize = 1.5 * stepSize
-                return (thickness - 0.5f) * stepSize;
-
-            case SidelineLanePosition.CustomDistance:
-                return (customLaneDistance > 0f) ? customLaneDistance : (thickness * stepSize) / 2f;
-
-            default:
-                return (thickness * stepSize) / 2f;
-        }
     }
 
     /// <summary>
@@ -624,23 +370,6 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
         isMoving = false;
     }
 
-    private Vector2Int GetGridPositionFromWorld(Vector2 worldPosition)
-    {
-        float stepSize = GetStepSize();
-
-        int x = Mathf.RoundToInt(
-            (worldPosition.x - boardCenter.x) / stepSize
-            + (boardColumns - 1) / 2f
-        );
-
-        int y = Mathf.RoundToInt(
-            (worldPosition.y - boardCenter.y) / stepSize
-            + (boardRows - 1) / 2f
-        );
-
-        return new Vector2Int(x, y);
-    }
-
     /// <summary>
     /// Điều hướng khối block ra Sideline và chạy dọc theo viền tới Cổng thoát (luôn xoay theo hướng mũi tên)
     /// </summary>
@@ -649,11 +378,7 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
         isMoving = true;
 
         // Đảm bảo Sprite luôn hiển thị nổi bật trên nền Sideline
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        if (sr != null && sr.sortingOrder < 5)
-        {
-            sr.sortingOrder = 5;
-        }
+        EnsureTopSortingOrder();
 
         // Tạm tắt collider để không bị kẹt khi đi dọc viền
         if (myCollider != null)
@@ -819,101 +544,6 @@ public class ArrowBlock : BlockItem, IPointerDownHandler
         onMoveFinished?.Invoke();
         yield return StartCoroutine(exitGate.PlayExitAnimationRoutine(this));
         isMoving = false;
-    }
-
-    /// <summary>
-    /// Xoay mượt mà góc Z của Transform (đảm bảo mũi tên luôn hướng theo chiều di chuyển)
-    /// </summary>
-    private IEnumerator SmoothRotateTo(float targetAngleZ, float duration)
-    {
-        float startAngleZ = transform.eulerAngles.z;
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            float currentZ = Mathf.LerpAngle(startAngleZ, targetAngleZ, t);
-            transform.rotation = Quaternion.Euler(0f, 0f, currentZ);
-            yield return null;
-        }
-
-        transform.rotation = Quaternion.Euler(0f, 0f, targetAngleZ);
-    }
-
-    /// <summary>
-    /// Di chuyển mượt mà Transform đến vị trí đích
-    /// </summary>
-    private IEnumerator SmoothMoveTo(Vector3 targetPos, float speed)
-    {
-        while (Vector3.Distance(transform.position, targetPos) > 0.005f)
-        {
-            transform.position = Vector3.MoveTowards(
-                transform.position,
-                targetPos,
-                speed * Time.deltaTime
-            );
-            yield return null;
-        }
-        transform.position = targetPos;
-    }
-
-    /// <summary>
-    /// Hiệu ứng nảy ngược lại một chút khi đâm trúng vật cản tạo cảm giác va chạm sống động
-    /// </summary>
-    private IEnumerator ImpactBounceRoutine(Vector2 dir, float bounceDistance)
-    {
-        Vector3 basePos = transform.position;
-        Vector3 bounceBackPos = basePos - (Vector3)(dir * bounceDistance);
-
-        float duration = 0.06f;
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            transform.position = Vector3.Lerp(basePos, bounceBackPos, elapsed / duration);
-            yield return null;
-        }
-
-        elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            transform.position = Vector3.Lerp(bounceBackPos, basePos, elapsed / duration);
-            yield return null;
-        }
-
-        transform.position = basePos;
-    }
-
-    /// <summary>
-    /// Hiệu ứng rung nhẹ khi bị kẹt không thể di chuyển
-    /// </summary>
-    private IEnumerator ShakeRoutine(Vector2 dir, float shakeDistance)
-    {
-        Vector3 basePos = transform.position;
-        Vector3 bumpPos = basePos + (Vector3)(dir * shakeDistance);
-
-        float duration = 0.05f;
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            transform.position = Vector3.Lerp(basePos, bumpPos, elapsed / duration);
-            yield return null;
-        }
-
-        elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            transform.position = Vector3.Lerp(bumpPos, basePos, elapsed / duration);
-            yield return null;
-        }
-
-        transform.position = basePos;
     }
 
 #if UNITY_EDITOR
