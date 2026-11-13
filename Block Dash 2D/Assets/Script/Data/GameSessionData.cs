@@ -21,9 +21,14 @@ public class SavedBlockState
 public class GameSessionData
 {
     [Header("Tiến trình màn chơi")]
-    public int currentLevel = 1; // Đã thêm biến lưu số level hiện tại ở đây
+    public int currentLevel = 1; 
     public bool hasActiveSession = false;
     
     [Header("Danh sách block đang chơi dở")]
     public List<SavedBlockState> savedBlocks = new List<SavedBlockState>();
+
+    [Header("Số lượt Booster còn lại trong phiên chơi")]
+    public int removeBoosterCount = 3;   // Số lượt mặc định cho Remove (có thể tùy chỉnh)
+    public int reverseBoosterCount = 3;  // Số lượt mặc định cho Reverse
+    public int shuffleBoosterCount = 3;  // Số lượt mặc định cho Shuffle
 }

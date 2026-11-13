@@ -6,13 +6,17 @@ public static class GameDataService
     private const string PREF_SESSION_KEY = "Game_SavedSessionData";
     private const string PREF_CURRENT_LEVEL = "Game_CurrentLevel";
 
-    public static void SaveSession(int level, bool hasSession, List<SavedBlockState> blocks)
+    // Cập nhật hàm SaveSession để nhận thêm số lượt của 3 booster
+    public static void SaveSession(int level, bool hasSession, List<SavedBlockState> blocks, int removeCount, int reverseCount, int shuffleCount)
     {
         GameSessionData session = new GameSessionData
         {
             currentLevel = level,
             hasActiveSession = hasSession,
-            savedBlocks = blocks ?? new List<SavedBlockState>()
+            savedBlocks = blocks ?? new List<SavedBlockState>(),
+            removeBoosterCount = removeCount,
+            reverseBoosterCount = reverseCount,
+            shuffleBoosterCount = shuffleCount
         };
 
         string jsonSession = JsonUtility.ToJson(session);
@@ -35,11 +39,18 @@ public static class GameDataService
             {
                 session.hasActiveSession = loadedSession.hasActiveSession;
                 session.savedBlocks = loadedSession.savedBlocks;
+                session.removeBoosterCount = loadedSession.removeBoosterCount;
+                session.reverseBoosterCount = loadedSession.reverseBoosterCount;
+                session.shuffleBoosterCount = loadedSession.shuffleBoosterCount;
             }
         }
         else
         {
             session.hasActiveSession = false;
+            // Giá trị mặc định khi chưa có session (mỗi màn chơi mới có 3 lượt cho mỗi booster)
+            session.removeBoosterCount = 3;
+            session.reverseBoosterCount = 3;
+            session.shuffleBoosterCount = 3;
         }
 
         return session;
@@ -53,8 +64,7 @@ public static class GameDataService
     }
 
     /// <summary>
-    /// Bắt đầu một level hoàn toàn mới (ví dụ người chơi chọn thẳng level 1), 
-    /// xóa bỏ session cũ để load map mới tinh mà không bị kẹt phiên chơi dở.
+    /// Bắt đầu một level hoàn toàn mới, reset lại số lượt booster về mặc định (ví dụ: 3 lượt/mỗi loại).
     /// </summary>
     public static GameSessionData StartNewSessionAtLevel(int targetLevel)
     {
@@ -66,7 +76,10 @@ public static class GameDataService
         {
             currentLevel = targetLevel,
             hasActiveSession = false,
-            savedBlocks = new List<SavedBlockState>()
+            savedBlocks = new List<SavedBlockState>(),
+            removeBoosterCount = 3,
+            reverseBoosterCount = 3,
+            shuffleBoosterCount = 3
         };
     }
 }

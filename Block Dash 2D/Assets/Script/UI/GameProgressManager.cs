@@ -27,6 +27,7 @@ public class GameProgressManager : MonoBehaviour
     private void Start()
     {
         currentSession = GameDataService.LoadSession();
+        Debug.Log($"<color=cyan>[Booster Status] Load session thành công - Level: {currentSession.currentLevel} | Remove: {currentSession.removeBoosterCount} | Reverse: {currentSession.reverseBoosterCount} | Shuffle: {currentSession.shuffleBoosterCount}</color>");
 
         UpdateLevelButtonUI();
 
@@ -196,7 +197,16 @@ public class GameProgressManager : MonoBehaviour
             }
         }
 
-        GameDataService.SaveSession(currentSession.currentLevel, true, blocksToSave);
+        // 🛠️ ĐÃ SỬA: Truyền thêm số lượt của 3 booster vào hàm SaveSession
+        GameDataService.SaveSession(
+            currentSession.currentLevel, 
+            true, 
+            blocksToSave, 
+            currentSession.removeBoosterCount, 
+            currentSession.reverseBoosterCount, 
+            currentSession.shuffleBoosterCount
+        );
+        Debug.Log($"<color=green>[Booster Status] Đã lưu tiến trình - Remove: {currentSession.removeBoosterCount} | Reverse: {currentSession.reverseBoosterCount} | Shuffle: {currentSession.shuffleBoosterCount}</color>");
     }
 
     private void RestoreSavedSession()
@@ -365,6 +375,59 @@ public class GameProgressManager : MonoBehaviour
         hasSpawnedBlocks = false;
     }
 
+    public void UseRemoveBooster()
+    {
+        // Luôn load session mới nhất để tránh bị ghi đè dữ liệu cũ
+        currentSession = GameDataService.LoadSession();
+
+        if (currentSession.removeBoosterCount > 0)
+        {
+            currentSession.removeBoosterCount--;
+            Debug.Log($"<color=yellow>[Booster] Đã dùng REMOVE! Số lượt còn lại: {currentSession.removeBoosterCount}</color>");
+            
+            // Lưu trực tiếp phiên chơi kèm số lượt mới
+            SaveCurrentSession();
+        }
+        else
+        {
+            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Remove!</color>");
+        }
+    }
+
+    public void UseReverseBooster()
+    {
+        currentSession = GameDataService.LoadSession();
+
+        if (currentSession.reverseBoosterCount > 0)
+        {
+            currentSession.reverseBoosterCount--;
+            Debug.Log($"<color=yellow>[Booster] Đã dùng REVERSE! Số lượt còn lại: {currentSession.reverseBoosterCount}</color>");
+            
+            SaveCurrentSession();
+        }
+        else
+        {
+            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Reverse!</color>");
+        }
+    }
+
+    public void UseShuffleBooster()
+    {
+        currentSession = GameDataService.LoadSession();
+
+        if (currentSession.shuffleBoosterCount > 0)
+        {
+            currentSession.shuffleBoosterCount--;
+            Debug.Log($"<color=yellow>[Booster] Đã dùng SHUFFLE! Số lượt còn lại: {currentSession.shuffleBoosterCount}</color>");
+            
+            SaveCurrentSession();
+        }
+        else
+        {
+            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Shuffle!</color>");
+        }
+    }
+    
     private void OnApplicationPause(bool pauseStatus)
     {
         if (pauseStatus && inGamePanel != null && inGamePanel.activeSelf && isPlaying)
