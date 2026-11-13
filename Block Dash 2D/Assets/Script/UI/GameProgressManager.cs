@@ -9,6 +9,10 @@ public class GameProgressManager : MonoBehaviour
     public GameObject mainMenuPanel;
     public GameObject inGamePanel;
     public GameObject winPanel;
+    
+    [Header("Mock Watch Ad Panel")]
+    public GameObject watchAdPanel;          // Kéo Panel xem quảng cáo vào đây (chỉ có nút ad)
+    private string currentAdBoosterType = "";// Lưu loại booster đang cần xem quảng cáo
 
     [Header("2. UI Elements (Số Level & Chiến thắng)")]
     public PixelNumberDisplay levelNumberDisplay;
@@ -35,7 +39,7 @@ public class GameProgressManager : MonoBehaviour
         Debug.Log($"<color=cyan>[Booster Status] Load session thành công - Level: {currentSession.currentLevel} | Remove: {currentSession.removeBoosterCount} | Reverse: {currentSession.reverseBoosterCount} | Shuffle: {currentSession.shuffleBoosterCount}</color>");
 
         UpdateLevelButtonUI();
-        UpdateBoosterUI(); // Cập nhật hiển thị số lượng booster khi vào game
+        UpdateBoosterUI();
 
         if (levelNumberDisplay != null)
         {
@@ -43,10 +47,10 @@ public class GameProgressManager : MonoBehaviour
             levelNumberDisplay.UpdateEditorDisplay();
         }
 
-        // LUÔN MỞ MAIN MENU KHI VỪA VÀO GAME VÀ CHƯA LOAD MAP GÌ CẢ
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
         if (winPanel != null) winPanel.SetActive(false);
+        if (watchAdPanel != null) watchAdPanel.SetActive(false);
 
         isPlaying = false;
         hasSpawnedBlocks = false;
@@ -68,9 +72,6 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Cập nhật số lượng và ẩn/hiện badge booster tương ứng
-    /// </summary>
     private void UpdateBoosterUI()
     {
         if (removeBadgeDisplay != null) removeBadgeDisplay.SetBoosterCount(currentSession.removeBoosterCount);
@@ -78,9 +79,6 @@ public class GameProgressManager : MonoBehaviour
         if (shuffleBadgeDisplay != null) shuffleBadgeDisplay.SetBoosterCount(currentSession.shuffleBoosterCount);
     }
 
-    /// <summary>
-    /// Nút Play thông thường (tiếp tục phiên chơi hiện tại hoặc load level đang lưu)
-    /// </summary>
     public void OnClickPlay()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
@@ -108,9 +106,6 @@ public class GameProgressManager : MonoBehaviour
         hasSpawnedBlocks = false;
     }
 
-    /// <summary>
-    /// Bắt đầu chơi một level cụ thể được chọn.
-    /// </summary>
     public void SelectLevelAndPlay(int targetLevel)
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
@@ -218,7 +213,6 @@ public class GameProgressManager : MonoBehaviour
             currentSession.reverseBoosterCount, 
             currentSession.shuffleBoosterCount
         );
-        Debug.Log($"<color=green>[Booster Status] Đã lưu tiến trình - Remove: {currentSession.removeBoosterCount} | Reverse: {currentSession.reverseBoosterCount} | Shuffle: {currentSession.shuffleBoosterCount}</color>");
     }
 
     private void RestoreSavedSession()
@@ -387,7 +381,7 @@ public class GameProgressManager : MonoBehaviour
     }
 
     // ==========================================
-    // CÁC HÀM XỬ LÝ SỬ DỤNG BOOSTER
+    // CÁC HÀM XỬ LÝ SỬ DỤNG BOOSTER & XEM QUẢNG CÁO
     // ==========================================
 
     public void UseRemoveBooster()
@@ -399,11 +393,12 @@ public class GameProgressManager : MonoBehaviour
             currentSession.removeBoosterCount--;
             Debug.Log($"<color=yellow>[Booster] Đã dùng REMOVE! Số lượt còn lại: {currentSession.removeBoosterCount}</color>");
             SaveCurrentSession();
-            UpdateBoosterUI(); // Cập nhật lại UI sau khi trừ lượt
+            UpdateBoosterUI();
         }
         else
         {
-            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Remove!</color>");
+            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Remove! Hiển thị nút quảng cáo.</color>");
+            TriggerWatchAdPopup("Remove");
         }
     }
 
@@ -420,7 +415,8 @@ public class GameProgressManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Reverse!</color>");
+            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Reverse! Hiển thị nút quảng cáo.</color>");
+            TriggerWatchAdPopup("Reverse");
         }
     }
 
@@ -437,7 +433,53 @@ public class GameProgressManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Shuffle!</color>");
+            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Shuffle! Hiển thị nút quảng cáo.</color>");
+            TriggerWatchAdPopup("Shuffle");
+        }
+    }
+
+    private void TriggerWatchAdPopup(string boosterType)
+    {
+        currentAdBoosterType = boosterType;
+        if (watchAdPanel != null)
+        {
+            watchAdPanel.SetActive(true); // Chỉ bật khung chứa nút ad lên
+        }
+    }
+
+    public void OnClickWatchAd()
+    {
+        currentSession = GameDataService.LoadSession();
+
+        if (currentAdBoosterType == "Remove")
+        {
+            currentSession.removeBoosterCount++;
+        }
+        else if (currentAdBoosterType == "Reverse")
+        {
+            currentSession.reverseBoosterCount++;
+        }
+        else if (currentAdBoosterType == "Shuffle")
+        {
+            currentSession.shuffleBoosterCount++;
+        }
+
+        SaveCurrentSession();
+        UpdateBoosterUI(); // Cập nhật lại giao diện, badge sẽ tự hiện lên và số lượng tăng lên 1
+
+        Debug.Log($"<color=green>[Ads] Xem quảng cáo thành công! Đã cộng 1 lượt {currentAdBoosterType} Booster.</color>");
+
+        if (watchAdPanel != null)
+        {
+            watchAdPanel.SetActive(false);
+        }
+    }
+
+    public void OnClickCloseAdPanel()
+    {
+        if (watchAdPanel != null)
+        {
+            watchAdPanel.SetActive(false);
         }
     }
 
