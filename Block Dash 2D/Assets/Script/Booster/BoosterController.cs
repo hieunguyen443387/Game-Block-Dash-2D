@@ -10,12 +10,13 @@ public class BoosterController : MonoBehaviour
     public static BoosterController Instance;
 
     [Header("References (GameScene)")]
-    [Tooltip("Container chứa các Block trong GameScene (nếu để trống script sẽ tự tìm)")]
     public Transform blockContainer;
 
-    // Lưu trữ booster đang được kích hoạt hiện tại
     private MonoBehaviour currentActiveBooster;
     private int lastActionFrame = -1;
+    
+    // Đánh dấu thời điểm bật booster để tránh nhầm lẫn click kích hoạt nút với click chọn block
+    private int activationFrame = -1; 
 
     private void Awake()
     {
@@ -29,7 +30,6 @@ public class BoosterController : MonoBehaviour
             return;
         }
 
-        // Tự động tìm BlockContainer nếu chưa gán
         EnsureBlockContainer();
     }
 
@@ -46,7 +46,6 @@ public class BoosterController : MonoBehaviour
         }
         else
         {
-            // Thử tìm từ MapLoader trong Scene
 #if UNITY_2023_1_OR_NEWER
             MapLoader loader = FindFirstObjectByType<MapLoader>();
 #else
@@ -61,10 +60,11 @@ public class BoosterController : MonoBehaviour
 
     private void Update()
     {
-        // Khi không có booster nào bật, không làm gì cả
         if (currentActiveBooster == null) return;
 
-        // Bắt sự kiện click / tap chuột khi đang kích hoạt Booster
+        // Tránh việc cú click bấm nút kích hoạt booster ở UI bị tính luôn là click chọn block trong cùng 1 frame
+        if (Time.frameCount == activationFrame) return;
+
         bool pointerDown = false;
         Vector2 screenPos = Vector2.zero;
 
@@ -89,7 +89,6 @@ public class BoosterController : MonoBehaviour
 
         if (pointerDown)
         {
-            // Bỏ qua nếu người dùng click vào phần tử UI (ví dụ nút bấm UI khác)
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 return;
@@ -106,68 +105,46 @@ public class BoosterController : MonoBehaviour
                     if (blockItem != null)
                     {
                         OnBlockClicked(blockItem);
+                        Input.ResetInputAxes();
                     }
                 }
             }
         }
     }
 
-    /// <summary>
-    /// Đăng ký booster đang được chọn
-    /// </summary>
     public void SetActiveBooster(MonoBehaviour booster)
     {
         currentActiveBooster = booster;
+        activationFrame = Time.frameCount; // Ghi nhận frame được bật
         Debug.Log($"<color=yellow>[BoosterController]</color> Đã kích hoạt Booster: {(booster != null ? booster.GetType().Name : "None")}.");
     }
 
-    /// <summary>
-    /// Hủy kích hoạt booster hiện tại
-    /// </summary>
     public void ClearActiveBooster()
     {
         currentActiveBooster = null;
         Debug.Log("<color=yellow>[BoosterController]</color> Đã tắt chế độ Booster.");
     }
 
-    /// <summary>
-    /// Kiểm tra xem có đang dùng booster nào yêu cầu click vào block hay không
-    /// </summary>
     public bool IsAnyBoosterActive()
     {
         return currentActiveBooster != null;
     }
 
-    /// <summary>
-    /// Trả về booster hiện đang active
-    /// </summary>
-    public MonoBehaviour GetActiveBooster()
-    {
-        return currentActiveBooster;
-    }
-
-    /// <summary>
-    /// Được gọi từ BlockItem khi người dùng click vào block trên màn hình
-    /// </summary>
     public void OnBlockClicked(BlockItem clickedBlock)
     {
         if (currentActiveBooster == null || clickedBlock == null) return;
 
-        // Tránh bị gọi lặp lại 2 lần trong cùng 1 frame (do vừa Update vừa EventSystem cùng bắt)
         if (Time.frameCount == lastActionFrame) return;
         lastActionFrame = Time.frameCount;
 
-        // 1. Nếu booster hiện tại là RemoveBlockBooster
         if (currentActiveBooster is RemoveBlockBooster removeBooster)
         {
             removeBooster.Execute(clickedBlock);
         }
-        // 2. Nếu booster hiện tại là ReverseBooster
         else if (currentActiveBooster is ReverseBooster reverseBooster)
         {
             reverseBooster.Execute(clickedBlock);
         }
-        // 3. Nếu booster hiện tại là ShuffleBooster (an toàn gọi phòng hờ)
         else if (currentActiveBooster is ShuffleBooster shuffleBooster)
         {
             shuffleBooster.Execute(clickedBlock);

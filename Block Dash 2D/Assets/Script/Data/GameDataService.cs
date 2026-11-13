@@ -48,9 +48,9 @@ public static class GameDataService
         {
             session.hasActiveSession = false;
             // Giá trị mặc định khi chưa có session (mỗi màn chơi mới có 3 lượt cho mỗi booster)
-            session.removeBoosterCount = 3;
-            session.reverseBoosterCount = 3;
-            session.shuffleBoosterCount = 3;
+            session.removeBoosterCount = 0;
+            session.reverseBoosterCount = 0;
+            session.shuffleBoosterCount = 0;
         }
 
         return session;
@@ -77,9 +77,9 @@ public static class GameDataService
             currentLevel = targetLevel,
             hasActiveSession = false,
             savedBlocks = new List<SavedBlockState>(),
-            removeBoosterCount = 3,
-            reverseBoosterCount = 3,
-            shuffleBoosterCount = 3
+            removeBoosterCount = 0,
+            reverseBoosterCount = 0,
+            shuffleBoosterCount = 0
         };
     }
 }
