@@ -304,7 +304,29 @@ public class GameProgressManager : MonoBehaviour
         hasSpawnedBlocks = false;
     }
 
-    
+    /// <summary>
+    /// Tiếp tục chơi lại phiên hiện tại ngay tại thời điểm thua (giữ nguyên hiện trạng map và vị trí block)
+    /// </summary>
+    public void ContinueCurrentSessionAfterLose()
+    {
+        if (losePanel != null) losePanel.SetActive(false);
+        if (inGamePanel != null) inGamePanel.SetActive(true);
+
+        // Tải lại session hiện tại
+        currentSession = GameDataService.LoadSession();
+
+        // Xóa map cũ trên màn hình để tránh chồng chất
+        if (mapLoader != null)
+        {
+            mapLoader.ClearMap();
+        }
+
+        // Khôi phục lại đúng nguyên trạng các block đang lưu trong session
+        RestoreSavedSession();
+
+        isPlaying = true;
+        hasSpawnedBlocks = false;
+    }
 
     private void OnApplicationPause(bool pauseStatus)
     {
