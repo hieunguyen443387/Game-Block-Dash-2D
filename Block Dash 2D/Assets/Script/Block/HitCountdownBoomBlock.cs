@@ -337,6 +337,17 @@ public class HitCountdownBoomBlock : MonoBehaviour
 
         onBoomExploded?.Invoke();
 
+        // 🔹 Tự động kích hoạt Lose Panel khi bom đếm lượt nổ về 0
+#if UNITY_2023_1_OR_NEWER
+        GameProgressManager progressManager = Object.FindFirstObjectByType<GameProgressManager>();
+#else
+        GameProgressManager progressManager = Object.FindObjectOfType<GameProgressManager>();
+#endif
+        if (progressManager != null)
+        {
+            progressManager.TriggerLoseLevel();
+        }
+
         if (boomEffectPrefab != null)
         {
             Instantiate(boomEffectPrefab, transform.position, Quaternion.identity);

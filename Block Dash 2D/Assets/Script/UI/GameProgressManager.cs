@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using TMPro;
 
 public class GameProgressManager : MonoBehaviour
 {
@@ -9,47 +8,27 @@ public class GameProgressManager : MonoBehaviour
     public GameObject mainMenuPanel;
     public GameObject inGamePanel;
     public GameObject winPanel;
-    
-    [Header("Mock Watch Ad Panel")]
-    public GameObject watchAdPanel;          // Kéo Panel xem quảng cáo vào đây (chỉ có nút ad)
-    private string currentAdBoosterType = "";// Lưu loại booster đang cần xem quảng cáo
+    public GameObject losePanel;
+    public GameObject watchAdPanel;          
 
-    [Header("2. UI Elements (Số Level & Chiến thắng)")]
-    public PixelNumberDisplay levelNumberDisplay;
-    public TextMeshProUGUI winLevelText;
-
-    [Header("3. Booster Badge Displays (Số lượng lượt dùng trên nút)")]
-    public BoosterBadgeDisplay removeBadgeDisplay;
-    public BoosterBadgeDisplay reverseBadgeDisplay;
-    public BoosterBadgeDisplay shuffleBadgeDisplay;
-
-    [Header("4. Tham chiếu hệ thống & Container chứa Block")]
+    [Header("2. Tham chiếu hệ thống & Container chứa Block")]
     public MapLoader mapLoader;
-    
-    [Tooltip("Kéo object BlocksContainer độc lập bên ngoài vào đây")]
     public Transform blocksContainer; 
 
     private GameSessionData currentSession;
     private bool isPlaying = false;
     private bool hasSpawnedBlocks = false;
+    
+    public static bool hasReturnedFromGame { get; set; } = false;
 
     private void Start()
     {
         currentSession = GameDataService.LoadSession();
-        Debug.Log($"<color=cyan>[Booster Status] Load session thành công - Level: {currentSession.currentLevel} | Remove: {currentSession.removeBoosterCount} | Reverse: {currentSession.reverseBoosterCount} | Shuffle: {currentSession.shuffleBoosterCount}</color>");
-
-        UpdateLevelButtonUI();
-        UpdateBoosterUI();
-
-        if (levelNumberDisplay != null)
-        {
-            levelNumberDisplay.previewLevel = currentSession.currentLevel;
-            levelNumberDisplay.UpdateEditorDisplay();
-        }
 
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
         if (winPanel != null) winPanel.SetActive(false);
+        if (losePanel != null) losePanel.SetActive(false);
         if (watchAdPanel != null) watchAdPanel.SetActive(false);
 
         isPlaying = false;
@@ -64,36 +43,26 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-    private void UpdateLevelButtonUI()
-    {
-        if (levelNumberDisplay != null)
-        {
-            levelNumberDisplay.SetNumber(currentSession.currentLevel);
-        }
-    }
+    public GameSessionData GetCurrentSession() => currentSession;
 
-    private void UpdateBoosterUI()
-    {
-        if (removeBadgeDisplay != null) removeBadgeDisplay.SetBoosterCount(currentSession.removeBoosterCount);
-        if (reverseBadgeDisplay != null) reverseBadgeDisplay.SetBoosterCount(currentSession.reverseBoosterCount);
-        if (shuffleBadgeDisplay != null) shuffleBadgeDisplay.SetBoosterCount(currentSession.shuffleBoosterCount);
-    }
-
-    public void OnClickPlay()
+    public void StartPlaySession()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (inGamePanel != null) inGamePanel.SetActive(true);
         if (winPanel != null) winPanel.SetActive(false);
+        if (losePanel != null) losePanel.SetActive(false);
 
         currentSession = GameDataService.LoadSession();
-        UpdateBoosterUI();
 
-        if (currentSession.hasActiveSession && currentSession.savedBlocks != null && currentSession.savedBlocks.Count > 0)
+        if (hasReturnedFromGame && currentSession.hasActiveSession && currentSession.savedBlocks != null && currentSession.savedBlocks.Count > 0)
         {
             RestoreSavedSession();
         }
         else
         {
+            GameDataService.ClearActiveSession(currentSession.currentLevel);
+            currentSession = GameDataService.LoadSession();
+            
             if (mapLoader != null)
             {
                 mapLoader.levelNumber = currentSession.currentLevel;
@@ -102,25 +71,20 @@ public class GameProgressManager : MonoBehaviour
             }
         }
 
+        hasReturnedFromGame = false;
         isPlaying = true;
         hasSpawnedBlocks = false;
     }
 
-    public void SelectLevelAndPlay(int targetLevel)
+    public void StartLevelAt(int targetLevel)
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
         if (inGamePanel != null) inGamePanel.SetActive(true);
         if (winPanel != null) winPanel.SetActive(false);
+        if (losePanel != null) losePanel.SetActive(false);
 
         currentSession = GameDataService.StartNewSessionAtLevel(targetLevel);
-        UpdateLevelButtonUI();
-        UpdateBoosterUI();
-
-        if (levelNumberDisplay != null)
-        {
-            levelNumberDisplay.previewLevel = currentSession.currentLevel;
-            levelNumberDisplay.UpdateEditorDisplay();
-        }
+        hasReturnedFromGame = false;
 
         if (mapLoader != null)
         {
@@ -145,18 +109,12 @@ public class GameProgressManager : MonoBehaviour
             if (child != null && child.gameObject.activeSelf)
             {
                 BlockItem item = child.GetComponent<BlockItem>();
-                if (item != null)
-                {
-                    remainingBlocks++;
-                }
+                if (item != null) remainingBlocks++;
                 totalCount++;
             }
         }
 
-        if (totalCount > 0)
-        {
-            hasSpawnedBlocks = true;
-        }
+        if (totalCount > 0) hasSpawnedBlocks = true;
 
         if (hasSpawnedBlocks && remainingBlocks == 0)
         {
@@ -205,13 +163,16 @@ public class GameProgressManager : MonoBehaviour
             }
         }
 
+        // 🔹 Đọc dữ liệu mới nhất từ ổ cứng để không bị ghi đè mất số booster đã trừ/cộng trong trận
+        GameSessionData latestSession = GameDataService.LoadSession();
+
         GameDataService.SaveSession(
-            currentSession.currentLevel, 
+            latestSession.currentLevel, 
             true, 
             blocksToSave, 
-            currentSession.removeBoosterCount, 
-            currentSession.reverseBoosterCount, 
-            currentSession.shuffleBoosterCount
+            latestSession.removeBoosterCount, 
+            latestSession.reverseBoosterCount, 
+            latestSession.shuffleBoosterCount
         );
     }
 
@@ -220,7 +181,6 @@ public class GameProgressManager : MonoBehaviour
         if (mapLoader == null) return;
 
         mapLoader.LoadBoardAndGatesOnly(currentSession.currentLevel);
-
         Transform targetContainer = blocksContainer != null ? blocksContainer : mapLoader.blocksContainer;
 
         if (targetContainer != null)
@@ -277,96 +237,58 @@ public class GameProgressManager : MonoBehaviour
     public void TriggerWinLevel()
     {
         if (inGamePanel != null) inGamePanel.SetActive(false);
-
+        hasReturnedFromGame = false;
         GameDataService.ClearActiveSession(currentSession.currentLevel + 1);
 
-        if (winLevelText != null)
+        if (winPanel != null)
         {
-            winLevelText.text = $"Hoàn thành cấp độ {currentSession.currentLevel}!";
+            winPanel.SetActive(true);
+            WinPanelUI winUI = winPanel.GetComponent<WinPanelUI>();
+            if (winUI != null) winUI.SetupWin(currentSession.currentLevel);
         }
-
-        if (winPanel != null) winPanel.SetActive(true);
     }
 
-    public void OnClickNextLevel()
+    public void TriggerLoseLevel()
     {
-        int nextLevel = currentSession.currentLevel + 1;
+        if (!isPlaying) return;
+        isPlaying = false;
 
-        string nextMapPath = Path.Combine(Application.persistentDataPath, "Levels", "Level_" + nextLevel + ".txt");
-        if (!File.Exists(nextMapPath))
+        if (inGamePanel != null) inGamePanel.SetActive(false);
+        GameDataService.ClearActiveSession(currentSession.currentLevel);
+
+        if (losePanel != null)
         {
-            nextLevel = currentSession.currentLevel; 
+            losePanel.SetActive(true);
+            LosePanelUI loseUI = losePanel.GetComponent<LosePanelUI>();
+            if (loseUI != null) loseUI.SetupLose(currentSession.currentLevel);
         }
-
-        GameDataService.ClearActiveSession(nextLevel);
-        
-        currentSession = GameDataService.LoadSession();
-        UpdateLevelButtonUI();
-        UpdateBoosterUI();
-
-        if (levelNumberDisplay != null)
-        {
-            levelNumberDisplay.previewLevel = currentSession.currentLevel;
-            levelNumberDisplay.UpdateEditorDisplay();
-        }
-
-        if (winPanel != null) winPanel.SetActive(false);
-        if (mapLoader != null)
-        {
-            mapLoader.ClearMap();
-        }
-
-        if (inGamePanel != null) inGamePanel.SetActive(true);
-        if (mapLoader != null)
-        {
-            mapLoader.levelNumber = currentSession.currentLevel;
-            mapLoader.LoadLevel();
-        }
-
-        isPlaying = true;
-        hasSpawnedBlocks = false;
     }
 
-    public void OnClickHomeFromWin()
+    public void ReturnToMainMenu()
     {
-        int nextLevel = currentSession.currentLevel + 1;
-        GameDataService.ClearActiveSession(nextLevel);
+        SaveCurrentSession();
+        hasReturnedFromGame = true;
 
-        currentSession = GameDataService.LoadSession();
-        UpdateLevelButtonUI();
-        UpdateBoosterUI();
+        if (mapLoader != null) mapLoader.ClearMap();
 
-        if (levelNumberDisplay != null)
-        {
-            levelNumberDisplay.previewLevel = currentSession.currentLevel;
-            levelNumberDisplay.UpdateEditorDisplay();
-        }
-
-        if (mapLoader != null)
-        {
-            mapLoader.ClearMap();
-        }
-
-        if (winPanel != null) winPanel.SetActive(false);
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+        if (inGamePanel != null) inGamePanel.SetActive(false);
+        if (winPanel != null) winPanel.SetActive(false);
+        if (losePanel != null) losePanel.SetActive(false);
         
         isPlaying = false;
         hasSpawnedBlocks = false;
     }
 
-    public void ShowMainMenu()
+    /// <summary>
+    /// 🔹 Về Main Menu khi người chơi vừa chiến thắng (Không lưu session dở, hiện nút Play)
+    /// </summary>
+    public void ReturnHomeFromWin()
     {
-        SaveCurrentSession();
-
-        currentSession = GameDataService.LoadSession();
-        UpdateLevelButtonUI();
-        UpdateBoosterUI();
-
-        if (levelNumberDisplay != null)
-        {
-            levelNumberDisplay.previewLevel = currentSession.currentLevel;
-            levelNumberDisplay.UpdateEditorDisplay();
-        }
+        hasReturnedFromGame = false; // Đảm bảo không hiện nút Continue ở Main Menu
+        
+        // Xóa sạch session của level vừa hoàn thành để lần sau vào chơi level mới
+        GameDataService.ClearActiveSession(currentSession.currentLevel);
 
         if (mapLoader != null)
         {
@@ -376,126 +298,21 @@ public class GameProgressManager : MonoBehaviour
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
         if (winPanel != null) winPanel.SetActive(false);
+        if (losePanel != null) losePanel.SetActive(false);
+        
         isPlaying = false;
         hasSpawnedBlocks = false;
     }
 
-    // ==========================================
-    // CÁC HÀM XỬ LÝ SỬ DỤNG BOOSTER & XEM QUẢNG CÁO
-    // ==========================================
-
-    public void UseRemoveBooster()
-    {
-        currentSession = GameDataService.LoadSession();
-
-        if (currentSession.removeBoosterCount > 0)
-        {
-            currentSession.removeBoosterCount--;
-            Debug.Log($"<color=yellow>[Booster] Đã dùng REMOVE! Số lượt còn lại: {currentSession.removeBoosterCount}</color>");
-            SaveCurrentSession();
-            UpdateBoosterUI();
-        }
-        else
-        {
-            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Remove! Hiển thị nút quảng cáo.</color>");
-            TriggerWatchAdPopup("Remove");
-        }
-    }
-
-    public void UseReverseBooster()
-    {
-        currentSession = GameDataService.LoadSession();
-
-        if (currentSession.reverseBoosterCount > 0)
-        {
-            currentSession.reverseBoosterCount--;
-            Debug.Log($"<color=yellow>[Booster] Đã dùng REVERSE! Số lượt còn lại: {currentSession.reverseBoosterCount}</color>");
-            SaveCurrentSession();
-            UpdateBoosterUI();
-        }
-        else
-        {
-            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Reverse! Hiển thị nút quảng cáo.</color>");
-            TriggerWatchAdPopup("Reverse");
-        }
-    }
-
-    public void UseShuffleBooster()
-    {
-        currentSession = GameDataService.LoadSession();
-
-        if (currentSession.shuffleBoosterCount > 0)
-        {
-            currentSession.shuffleBoosterCount--;
-            Debug.Log($"<color=yellow>[Booster] Đã dùng SHUFFLE! Số lượt còn lại: {currentSession.shuffleBoosterCount}</color>");
-            SaveCurrentSession();
-            UpdateBoosterUI();
-        }
-        else
-        {
-            Debug.Log("<color=red>[Booster] Đã HẾT lượt sử dụng Shuffle! Hiển thị nút quảng cáo.</color>");
-            TriggerWatchAdPopup("Shuffle");
-        }
-    }
-
-    private void TriggerWatchAdPopup(string boosterType)
-    {
-        currentAdBoosterType = boosterType;
-        if (watchAdPanel != null)
-        {
-            watchAdPanel.SetActive(true); // Chỉ bật khung chứa nút ad lên
-        }
-    }
-
-    public void OnClickWatchAd()
-    {
-        currentSession = GameDataService.LoadSession();
-
-        if (currentAdBoosterType == "Remove")
-        {
-            currentSession.removeBoosterCount++;
-        }
-        else if (currentAdBoosterType == "Reverse")
-        {
-            currentSession.reverseBoosterCount++;
-        }
-        else if (currentAdBoosterType == "Shuffle")
-        {
-            currentSession.shuffleBoosterCount++;
-        }
-
-        SaveCurrentSession();
-        UpdateBoosterUI(); // Cập nhật lại giao diện, badge sẽ tự hiện lên và số lượng tăng lên 1
-
-        Debug.Log($"<color=green>[Ads] Xem quảng cáo thành công! Đã cộng 1 lượt {currentAdBoosterType} Booster.</color>");
-
-        if (watchAdPanel != null)
-        {
-            watchAdPanel.SetActive(false);
-        }
-    }
-
-    public void OnClickCloseAdPanel()
-    {
-        if (watchAdPanel != null)
-        {
-            watchAdPanel.SetActive(false);
-        }
-    }
+    
 
     private void OnApplicationPause(bool pauseStatus)
     {
-        if (pauseStatus && inGamePanel != null && inGamePanel.activeSelf && isPlaying)
-        {
-            SaveCurrentSession();
-        }
+        if (pauseStatus && inGamePanel != null && inGamePanel.activeSelf && isPlaying) SaveCurrentSession();
     }
 
     private void OnApplicationQuit()
     {
-        if (inGamePanel != null && inGamePanel.activeSelf && isPlaying)
-        {
-            SaveCurrentSession();
-        }
+        if (inGamePanel != null && inGamePanel.activeSelf && isPlaying) SaveCurrentSession();
     }
 }
