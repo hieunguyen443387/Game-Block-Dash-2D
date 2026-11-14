@@ -47,7 +47,6 @@ public static class GameDataService
         else
         {
             session.hasActiveSession = false;
-            // Giá trị mặc định khi chưa có session (mỗi màn chơi mới có 3 lượt cho mỗi booster)
             session.removeBoosterCount = 0;
             session.reverseBoosterCount = 0;
             session.shuffleBoosterCount = 0;
@@ -64,7 +63,7 @@ public static class GameDataService
     }
 
     /// <summary>
-    /// Bắt đầu một level hoàn toàn mới, reset lại số lượt booster về mặc định (ví dụ: 3 lượt/mỗi loại).
+    /// Bắt đầu một level hoàn toàn mới, xóa dữ liệu chơi dở cũ.
     /// </summary>
     public static GameSessionData StartNewSessionAtLevel(int targetLevel)
     {
@@ -72,14 +71,31 @@ public static class GameDataService
         PlayerPrefs.SetInt(PREF_CURRENT_LEVEL, targetLevel);
         PlayerPrefs.Save();
 
-        return new GameSessionData
+        GameSessionData newSession = new GameSessionData
         {
-            currentLevel = targetLevel,
-            hasActiveSession = false,
-            savedBlocks = new List<SavedBlockState>(),
-            removeBoosterCount = 0,
-            reverseBoosterCount = 0,
-            shuffleBoosterCount = 0
+            currentLevel = targetLevel
         };
+        newSession.ResetToInitialState(0);
+        return newSession;
+    }
+
+    /// <summary>
+    /// Chức năng RESTART: Xóa tiến trình đang chơi dở của level hiện tại và trả về phiên chơi sạch từ đầu level.
+    /// </summary>
+    public static GameSessionData RestartCurrentSession()
+    {
+        int currentLevel = PlayerPrefs.GetInt(PREF_CURRENT_LEVEL, 1);
+        PlayerPrefs.DeleteKey(PREF_SESSION_KEY);
+        PlayerPrefs.SetInt(PREF_CURRENT_LEVEL, currentLevel);
+        PlayerPrefs.Save();
+
+        GameSessionData restartedSession = new GameSessionData
+        {
+            currentLevel = currentLevel
+        };
+        restartedSession.ResetToInitialState(0);
+
+        Debug.Log($"<color=cyan>[GameDataService]</color> Đã reset dữ liệu phiên chơi để Restart Level {currentLevel}");
+        return restartedSession;
     }
 }

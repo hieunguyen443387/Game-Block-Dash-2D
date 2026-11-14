@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using TMPro; // Dùng cho TMP_InputField
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -11,6 +12,13 @@ public class MapLoader : MonoBehaviour
     [Header("Level Settings")]
     [Tooltip("Nhập số Level cần tải (Ví dụ: 1 -> tải file Level_1.txt)")]
     public int levelNumber = 1;
+
+    [Header("UI Setting Controls (Chức năng chọn & Restart Level)")]
+    [Tooltip("Kéo ô TMP_InputField nhập số level trong SettingContainer vào đây")]
+    public TMP_InputField levelInputField;
+
+    [Tooltip("Kéo PopupPanel cài đặt vào đây để tự đóng bảng sau khi bấm Load/Restart (Tùy chọn)")]
+    public GameObject settingPopupPanel;
 
     [Header("Max Level Auto Detection (Chỉ đọc)")]
     [Tooltip("Cấp độ cao nhất được tự động quét trong thư mục LocalLow/Levels")]
@@ -73,7 +81,7 @@ public class MapLoader : MonoBehaviour
             string[] files = Directory.GetFiles(folderPath, "Level_*.txt");
             foreach (var file in files)
             {
-                string fileName = Path.GetFileNameWithoutExtension(file); // Ví dụ: Level_1, Level_2
+                string fileName = Path.GetFileNameWithoutExtension(file);
                 string levelStr = fileName.Replace("Level_", "");
                 if (int.TryParse(levelStr, out int lvlNum))
                 {
@@ -87,6 +95,89 @@ public class MapLoader : MonoBehaviour
 
         maxAvailableLevel = highestLevel;
     }
+
+    // =========================================================================
+    // CÁC HÀM XỬ LÝ CHO SETTING POPUP (CHỌN LEVEL & RESTART)
+    // =========================================================================
+
+    /// <summary>
+    /// Gắn hàm này vào sự kiện On Click() của nút LOAD trong SettingContainer
+    /// </summary>
+    public void OnClickLoadLevelFromInput()
+    {
+        if (levelInputField == null)
+        {
+            Debug.LogWarning("[MapLoader] Chưa gán levelInputField trong Inspector!");
+            return;
+        }
+
+        LoadLevelByInputString(levelInputField.text);
+    }
+
+    /// <summary>
+    /// Tải level dựa trên chuỗi số truyền vào (có thể gắn vào OnEndEdit của InputField hoặc gọi qua code)
+    /// </summary>
+    public void LoadLevelByInputString(string inputStr)
+    {
+        if (string.IsNullOrWhiteSpace(inputStr))
+        {
+            Debug.LogWarning("[MapLoader] Ô nhập level đang trống!");
+            return;
+        }
+
+        if (int.TryParse(inputStr.Trim(), out int targetLevel))
+        {
+            if (targetLevel < 1) targetLevel = 1;
+
+            AutoDetectMaxLevel();
+            if (targetLevel > maxAvailableLevel)
+            {
+                Debug.LogWarning($"[MapLoader] Level {targetLevel} vượt quá giới hạn. Tự động chuyển về Level cao nhất: {maxAvailableLevel}");
+                targetLevel = maxAvailableLevel;
+            }
+
+            // Đồng bộ dữ liệu phiên chơi mới sang GameDataService
+            GameDataService.StartNewSessionAtLevel(targetLevel);
+
+            levelNumber = targetLevel;
+            LoadLevel();
+
+            if (levelInputField != null)
+            {
+                levelInputField.text = ""; // Xóa chữ đã nhập sau khi load xong
+            }
+
+            if (settingPopupPanel != null)
+            {
+                settingPopupPanel.SetActive(false);
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[MapLoader] Giá trị '{inputStr}' không phải là số level hợp lệ!");
+        }
+    }
+
+    /// <summary>
+    /// Gắn hàm này vào sự kiện On Click() của nút RESTART trong SettingContainer.
+    /// Sử dụng GameDataService để reset phiên chơi hiện tại và tải lại map từ đầu.
+    /// </summary>
+    public void OnClickRestartLevel()
+    {
+        // Reset phiên chơi hiện tại trong GameDataService và GameSessionData
+        GameSessionData cleanSession = GameDataService.RestartCurrentSession();
+
+        // Cập nhật lại levelNumber theo đúng level hiện tại từ service và load lại map
+        levelNumber = cleanSession.currentLevel;
+        LoadLevel();
+
+        if (settingPopupPanel != null)
+        {
+            settingPopupPanel.SetActive(false);
+        }
+    }
+
+    // =========================================================================
 
     private string NormalizeKey(string text)
     {
@@ -207,6 +298,13 @@ public class MapLoader : MonoBehaviour
         if (levelNumber > maxAvailableLevel)
         {
             levelNumber = maxAvailableLevel;
+        }
+
+        // Lưu lại level hiện tại vào PlayerPrefs thông qua GameDataService khi load trực tiếp
+        if (Application.isPlaying)
+        {
+            PlayerPrefs.SetInt("Game_CurrentLevel", levelNumber);
+            PlayerPrefs.Save();
         }
 
         string targetMapName = "Level_" + levelNumber;

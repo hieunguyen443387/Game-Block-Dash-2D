@@ -31,4 +31,24 @@ public class GameSessionData
     public int removeBoosterCount = 3;   // Số lượt mặc định cho Remove (có thể tùy chỉnh)
     public int reverseBoosterCount = 3;  // Số lượt mặc định cho Reverse
     public int shuffleBoosterCount = 3;  // Số lượt mặc định cho Shuffle
+
+    /// <summary>
+    /// Đặt lại dữ liệu phiên chơi về trạng thái ban đầu của level hiện tại (dùng cho chức năng Restart)
+    /// </summary>
+    public void ResetToInitialState(int defaultBoosterCount = 0)
+    {
+        hasActiveSession = false;
+        if (savedBlocks != null)
+        {
+            savedBlocks.Clear();
+        }
+        else
+        {
+            savedBlocks = new List<SavedBlockState>();
+        }
+
+        removeBoosterCount = defaultBoosterCount;
+        reverseBoosterCount = defaultBoosterCount;
+        shuffleBoosterCount = defaultBoosterCount;
+    }
 }
