@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Block tự tìm đường (BFS) đến biên bàn cờ gần nhất rồi trượt ra Cổng thoát.
-/// Kế thừa MovableBlockBase để dùng chung thông số board, hiệu ứng chuyển động và xử lý click.
+/// Kế thừa MovableBlockBase để dùng chung thông số board, hiệu ứng chuyển động và xử lý click (Đã tích hợp chặn UI).
 /// </summary>
 public class FreeMoveBlock : MovableBlockBase
 {
@@ -137,7 +137,6 @@ public class FreeMoveBlock : MovableBlockBase
     // OBSTACLE CHECK
     // =========================================================
 
-    
     private bool IsBlocked(Vector2Int cell)
     {
         if (!IsInsideBoard(cell)) return true;

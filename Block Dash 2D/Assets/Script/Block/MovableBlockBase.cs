@@ -14,7 +14,7 @@ using UnityEngine.InputSystem;
 /// - Tính toán kích thước ô (GetStepSize, GetSidelineLaneDistance)
 /// - Hiệu ứng chuyển động (SmoothMoveTo, SmoothRotateTo)
 /// - Hiệu ứng vật lý (ShakeRoutine, ImpactBounceRoutine)
-/// - Xử lý click (OnPointerDown, CheckClickAtScreenPosition, OnMouseDown)
+/// - Xử lý click (OnPointerDown, CheckClickAtScreenPosition, OnMouseDown) - Đã tích hợp chặn click xuyên UI
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
 public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
@@ -117,15 +117,17 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
     }
 
     // =========================================================
-    // CLICK HANDLING - Xử lý click / chạm
+    // CLICK HANDLING - Xử lý click / chạm (Đã tích hợp chặn UI)
     // =========================================================
 
     /// <summary>
     /// Xử lý click từ Unity EventSystem (UI / 2D Physics Raycaster).
-    /// Class con override để gọi logic di chuyển riêng.
     /// </summary>
     public virtual void OnPointerDown(PointerEventData eventData)
     {
+        // 🔹 Chặn click nếu đang trỏ vào UI (Popup, Setting, Button,...)
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
         if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
         {
             BoosterController.Instance.OnBlockClicked(this);
@@ -138,6 +140,22 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
 
     protected void CheckClickAtScreenPosition(Vector2 screenPosition)
     {
+        // 🔹 Chặn click nếu đang trỏ vào UI (Hỗ trợ an toàn cho cả Input System mới và cũ)
+#if ENABLE_INPUT_SYSTEM
+        if (Touchscreen.current != null)
+        {
+            foreach (var touch in Touchscreen.current.touches)
+            {
+                if (touch.press.isPressed)
+                {
+                    int touchId = touch.touchId.ReadValue();
+                    if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(touchId)) return;
+                }
+            }
+        }
+#endif
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
         if (Time.frameCount == lastClickFrame) return;
 
         Camera cam = Camera.main;
@@ -160,6 +178,9 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
 #if ENABLE_LEGACY_INPUT_MANAGER
     protected virtual void OnMouseDown()
     {
+        // 🔹 Chặn click nếu đang trỏ vào UI
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+
         if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
         {
             BoosterController.Instance.OnBlockClicked(this);
@@ -302,9 +323,6 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
     // MOVEMENT COROUTINES - Hiệu ứng chuyển động dùng chung
     // =========================================================
 
-    /// <summary>
-    /// Di chuyển mượt mà Transform đến vị trí đích với tốc độ cho trước
-    /// </summary>
     protected IEnumerator SmoothMoveTo(Vector3 targetPos, float speed)
     {
         while (Vector3.Distance(transform.position, targetPos) > 0.005f)
@@ -315,17 +333,11 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
         transform.position = targetPos;
     }
 
-    /// <summary>
-    /// Overload nhận Vector2 để tiện dùng
-    /// </summary>
     protected IEnumerator SmoothMoveTo(Vector2 target, float speed)
     {
         yield return StartCoroutine(SmoothMoveTo(new Vector3(target.x, target.y, transform.position.z), speed));
     }
 
-    /// <summary>
-    /// Xoay mượt mà góc Z của Transform trong khoảng thời gian duration (giây)
-    /// </summary>
     protected IEnumerator SmoothRotateTo(float targetAngleZ, float duration)
     {
         float startAngleZ = transform.eulerAngles.z;
@@ -343,9 +355,6 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
         transform.rotation = Quaternion.Euler(0f, 0f, targetAngleZ);
     }
 
-    /// <summary>
-    /// Hiệu ứng nảy ngược lại một chút khi đâm trúng vật cản (cảm giác va chạm sống động)
-    /// </summary>
     protected IEnumerator ImpactBounceRoutine(Vector2 dir, float bounceDistance)
     {
         Vector3 basePos = transform.position;
@@ -372,9 +381,6 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
         transform.position = basePos;
     }
 
-    /// <summary>
-    /// Hiệu ứng rung nhẹ khi bị kẹt không thể di chuyển
-    /// </summary>
     protected IEnumerator ShakeRoutine(Vector2 dir, float shakeDistance)
     {
         Vector3 basePos = transform.position;
@@ -405,10 +411,6 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
     // SPRITE HELPERS
     // =========================================================
 
-    /// <summary>
-    /// Đảm bảo SpriteRenderer của block hiển thị nổi bật trên nền Sideline
-    /// (gọi trước khi block đi ra ngoài bàn cờ)
-    /// </summary>
     protected void EnsureTopSortingOrder(int minOrder = 5)
     {
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
@@ -418,4 +420,3 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
         }
     }
 }
-
