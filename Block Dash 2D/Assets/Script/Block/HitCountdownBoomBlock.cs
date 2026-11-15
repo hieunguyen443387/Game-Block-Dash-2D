@@ -42,6 +42,9 @@ public class HitCountdownBoomBlock : MonoBehaviour
 
     private bool isExploding = false;
 
+    /// <summary>Block đang trong quá trình nổ (đã bị loại khỏi bàn chơi, chờ hiệu ứng kết thúc)</summary>
+    public bool IsExploding => isExploding;
+
     private void Awake()
     {
         AutoConnect();
@@ -395,21 +398,15 @@ public class HitCountdownBoomBlock : MonoBehaviour
 
         onBoomExploded?.Invoke();
 
-#if UNITY_2023_1_OR_NEWER
-        GameProgressManager progressManager = Object.FindFirstObjectByType<GameProgressManager>();
-#else
-        GameProgressManager progressManager = Object.FindObjectOfType<GameProgressManager>();
-#endif
-        if (progressManager != null)
-        {
-            progressManager.TriggerLoseLevel(0.45f);
-        }
-
         if (boomEffectPrefab != null)
         {
             Instantiate(boomEffectPrefab, transform.position, Quaternion.identity);
         }
 
+        // 🔹 QUAN TRỌNG: Tách block bom ra khỏi container TRƯỚC khi gọi TriggerLoseLevel.
+        // TriggerLoseLevel sẽ gọi SaveCurrentSession(); nếu lúc đó block vẫn còn trong container
+        // thì nó bị lưu lại với hasBoom = false / hitCount = 0.
+        // Hậu quả: bấm Continue thì quả bom "sống lại" thành block thường (mất cơ chế bom).
         RemoveFromSpawner();
         transform.SetParent(null);
 
@@ -420,6 +417,17 @@ public class HitCountdownBoomBlock : MonoBehaviour
 
         ArrowBlock arrow = GetComponent<ArrowBlock>();
         if (arrow != null) arrow.enabled = false;
+
+#if UNITY_2023_1_OR_NEWER
+        GameProgressManager progressManager = Object.FindFirstObjectByType<GameProgressManager>();
+#else
+        GameProgressManager progressManager = Object.FindObjectOfType<GameProgressManager>();
+#endif
+        if (progressManager != null)
+        {
+            // Gọi SAU khi block đã ra khỏi container => session lưu lại không còn quả bom này
+            progressManager.TriggerLoseLevel(0.45f);
+        }
 
         if (gameObject.activeInHierarchy)
         {

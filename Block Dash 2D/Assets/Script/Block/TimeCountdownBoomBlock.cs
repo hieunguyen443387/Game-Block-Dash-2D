@@ -31,6 +31,9 @@ public class TimeCountdownBoomBlock : MonoBehaviour
 
     private bool isExploding = false;
 
+    /// <summary>Block đang trong quá trình nổ (đã bị loại khỏi bàn chơi, chờ hiệu ứng kết thúc)</summary>
+    public bool IsExploding => isExploding;
+
     private void Awake() { AutoConnect(); EnsureNumberDisplay(); remainingTime = countdownDuration; UpdateBoomState(); }
     private void Start() { AutoConnect(); EnsureNumberDisplay(); if (remainingTime <= 0) remainingTime = countdownDuration; UpdateBoomState(); }
 
@@ -188,22 +191,26 @@ public class TimeCountdownBoomBlock : MonoBehaviour
         if (sparkEffectObject != null) sparkEffectObject.SetActive(false);
         onBoomExploded?.Invoke();
 
-#if UNITY_2023_1_OR_NEWER
-        GameProgressManager progressManager = Object.FindFirstObjectByType<GameProgressManager>();
-#else
-        GameProgressManager progressManager = Object.FindObjectOfType<GameProgressManager>();
-#endif
-        if (progressManager != null) progressManager.TriggerLoseLevel(0.45f);
         if (boomEffectPrefab != null) Instantiate(boomEffectPrefab, transform.position, Quaternion.identity);
 
+        // 🔹 Tách block bom khỏi container TRƯỚC khi gọi TriggerLoseLevel (SaveCurrentSession),
+        // nếu không block đang nổ sẽ bị lưu lại và "sống lại" khi bấm Continue.
         RemoveFromSpawner();
         transform.SetParent(null);
+
         SpriteRenderer mainSr = GetComponent<SpriteRenderer>();
         if (mainSr != null) mainSr.enabled = false;
         Collider2D col2d = GetComponent<Collider2D>();
         if (col2d != null) col2d.enabled = false;
         ArrowBlock arrow = GetComponent<ArrowBlock>();
         if (arrow != null) arrow.enabled = false;
+
+#if UNITY_2023_1_OR_NEWER
+        GameProgressManager progressManager = Object.FindFirstObjectByType<GameProgressManager>();
+#else
+        GameProgressManager progressManager = Object.FindObjectOfType<GameProgressManager>();
+#endif
+        if (progressManager != null) progressManager.TriggerLoseLevel(0.45f);
 
         if (gameObject.activeInHierarchy) StartCoroutine(BoomExplosionRoutine());
         else DestroySelf();

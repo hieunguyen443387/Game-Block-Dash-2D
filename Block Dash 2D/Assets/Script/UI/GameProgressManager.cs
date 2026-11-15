@@ -142,11 +142,19 @@ public class GameProgressManager : MonoBehaviour
 
         List<SavedBlockState> blocksToSave = new List<SavedBlockState>();
 
-        foreach (Transform child in blocksContainer)
+        foreach (Transform child in targetContainer)
         {
             BlockItem item = child.GetComponent<BlockItem>();
             if (item != null)
             {
+                // 🔹 Không lưu những block đang phát nổ: chúng đã bị loại khỏi bàn chơi,
+                // nếu lưu lại thì khi bấm Continue sẽ xuất hiện lại dưới dạng block thường (mất bom).
+                HitCountdownBoomBlock hitBoom = child.GetComponent<HitCountdownBoomBlock>();
+                if (hitBoom != null && hitBoom.IsExploding) continue;
+
+                TimeCountdownBoomBlock timeBoom = child.GetComponent<TimeCountdownBoomBlock>();
+                if (timeBoom != null && timeBoom.IsExploding) continue;
+
                 SavedBlockState bState = new SavedBlockState
                 {
                     blockType = item.blockType,
