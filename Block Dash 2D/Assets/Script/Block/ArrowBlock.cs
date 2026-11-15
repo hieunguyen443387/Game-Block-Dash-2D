@@ -290,12 +290,9 @@ public class ArrowBlock : MovableBlockBase
                 {
                     isBlocked = true;
 
-                    // Kiểm tra block bị húc trúng có đang bật Boom không
-                    HitCountdownBoomBlock boomBlock = hit.GetComponentInParent<HitCountdownBoomBlock>();
-                    if (boomBlock != null && boomBlock.hasBoom)
-                    {
-                        boomBlock.TakeHit(1);
-                    }
+                    // Báo va chạm cho CẢ HAI phía: block đang đâm và block bị đâm.
+                    // Nhờ vậy boom bị trừ bất kể block nào là bên chủ động.
+                    HitCountdownBoomBlock.NotifyCollision(gameObject, hit.gameObject);
 
                     break;
                 }

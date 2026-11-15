@@ -456,4 +456,27 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
             sr.sortingOrder = minOrder;
         }
     }
+
+    // =========================================================
+    // BLOCK INTERACTION HELPERS - Tiện ích tương tác giữa các Block
+    // =========================================================
+
+    /// <summary>
+    /// Kiểm tra xem đối tượng va chạm có phải là một Block hợp lệ hay không,
+    /// đồng thời tuân thủ bộ lọc Layer và Trigger của MovableBlockBase.
+    /// </summary>
+    protected virtual bool IsValidBlockCollision(GameObject targetObj)
+    {
+        if (targetObj == null || targetObj == gameObject) 
+            return false;
+
+        // Kiểm tra xem object có nằm trong LayerMask va chạm không
+        if (((1 << targetObj.layer) & obstacleLayers) == 0) 
+            return false;
+
+        // Kiểm tra nhanh xem đối tượng có chứa bất kỳ thành phần Block nào không
+        return targetObj.GetComponentInParent<BlockItem>() != null ||
+               targetObj.GetComponentInParent<ArrowBlock>() != null ||
+               targetObj.GetComponentInParent<FreezableBlock>() != null;
+    }
 }

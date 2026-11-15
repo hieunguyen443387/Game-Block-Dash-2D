@@ -286,6 +286,10 @@ public class TwoWayBlock : MovableBlockBase
                 if (hit.transform.IsChildOf(transform)) continue;
 
                 isBlocked = true;
+
+                // Báo va chạm cho CẢ HAI phía (block đang đâm và block bị đâm)
+                HitCountdownBoomBlock.NotifyCollision(gameObject, hit.gameObject);
+
                 break;
             }
 

@@ -11,13 +11,24 @@ using UnityEditor;
 public class HitCountdownBoomBlock : MonoBehaviour
 {
     [Header("1. Cấu hình Boom")]
+    [Tooltip("Tích chọn để bật chế độ Boom đếm ngược trên Block này.")]
     public bool hasBoom = false;
-    [Range(0, 99)] public int hitCount = 3;
+
+    [Tooltip("Số lượt chịu lực (N). Mỗi khi xảy ra va chạm sẽ giảm đi 1. Về 0 sẽ phát nổ.")]
+    [Range(0, 99)]
+    public int hitCount = 3;
 
     [Header("2. Đối tượng con & Giao diện")]
+    [Tooltip("Object hiển thị hình ảnh/viền Boom phủ lên block")]
     public GameObject boomOverlay;
+
+    [Tooltip("Object chứa hiệu ứng tàn lửa")]
     public GameObject sparkEffectObject;
+
+    [Tooltip("SpriteRenderer hiển thị số đếm Pixel Art")]
     public SpriteRenderer numberRenderer;
+
+    [Tooltip("SpriteRenderer hiển thị hàng chục nếu số đếm >= 10")]
     public SpriteRenderer numberRendererTens;
 
     [Header("3. Liên kết ArrowBlock")]
@@ -25,56 +36,161 @@ public class HitCountdownBoomBlock : MonoBehaviour
 
     [Header("4. Hiệu ứng khi nổ & Sự kiện")]
     public GameObject boomEffectPrefab;
+
     public UnityEvent onBoomExploded;
     public UnityEvent<int> onHitCountChanged;
 
     private bool isExploding = false;
 
-    private void Awake() { AutoConnect(); EnsureNumberDisplay(); UpdateBoomState(); }
-    private void Start() { AutoConnect(); EnsureNumberDisplay(); UpdateBoomState(); }
+    private void Awake()
+    {
+        AutoConnect();
+        EnsureNumberDisplay();
+        UpdateBoomState();
+    }
 
+    private void Start()
+    {
+        AutoConnect();
+        EnsureNumberDisplay();
+        UpdateBoomState();
+    }
+
+    // =========================================================
+    // XỬ LÝ VA CHẠM
+    // =========================================================
+
+    // 🔹 Va chạm vật lý thông thường (chỉ chạy khi có Rigidbody2D).
+    // Chỉ dùng Enter (không dùng Stay) để tránh bị trừ liên tục mỗi frame.
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (hasBoom && !isExploding && (collision.gameObject.GetComponent<ArrowBlock>() != null || collision.gameObject.GetComponent<BlockItem>() != null))
-            TakeHit(1);
+        NotifyCollision(gameObject, collision.gameObject);
     }
+
+    // 🔹 Va chạm dạng xuyên qua (chỉ chạy khi có Rigidbody2D).
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (hasBoom && !isExploding && (collision.gameObject.GetComponent<ArrowBlock>() != null || collision.gameObject.GetComponent<BlockItem>() != null))
-            TakeHit(1);
+        NotifyCollision(gameObject, collision.gameObject);
+    }
+
+    /// <summary>
+    /// Thông báo 2 block vừa va chạm nhau và trừ lượt cho MỌI HitCountdownBoomBlock
+    /// ở CẢ HAI phía (bên chủ động đâm và bên bị đâm).
+    /// Hàm này được gọi từ logic phát hiện vật cản của các block di chuyển
+    /// (ArrowBlock, RetreatArrowBlock, TwoWayBlock...) nên boom luôn bị trừ
+    /// bất kể block nào là bên tông vào.
+    /// </summary>
+    public static void NotifyCollision(GameObject a, GameObject b, int amount = 1)
+    {
+        if (a == null || b == null) return;
+
+        // Chỉ tính va chạm giữa các Block thật sự (bỏ qua tường, viền, cổng...)
+        if (!IsBlockObject(a) || !IsBlockObject(b)) return;
+
+        // Tránh trừ 2 lần cho cùng một cặp va chạm trong cùng 1 frame
+        // (Unity có thể gọi OnCollisionEnter2D trên cả 2 object).
+        if (IsDuplicateThisFrame(a, b)) return;
+
+        HitCountdownBoomBlock boomA = a.GetComponentInParent<HitCountdownBoomBlock>();
+        HitCountdownBoomBlock boomB = b.GetComponentInParent<HitCountdownBoomBlock>();
+
+        // Nếu 2 collider thuộc cùng một block (ví dụ collider con) thì chỉ trừ 1 lần
+        if (boomA != null && boomA == boomB)
+        {
+            boomA.TakeHit(amount);
+            return;
+        }
+
+        if (boomA != null) boomA.TakeHit(amount);
+        if (boomB != null) boomB.TakeHit(amount);
+    }
+
+    private static readonly System.Collections.Generic.Dictionary<long, int> lastHitFrameByPair =
+        new System.Collections.Generic.Dictionary<long, int>();
+
+    private static bool IsDuplicateThisFrame(GameObject a, GameObject b)
+    {
+        int idA = a.GetInstanceID();
+        int idB = b.GetInstanceID();
+
+        long key = ((long)Mathf.Min(idA, idB) << 32) | (uint)Mathf.Max(idA, idB);
+        int frame = Time.frameCount;
+
+        if (lastHitFrameByPair.TryGetValue(key, out int lastFrame) && lastFrame == frame)
+        {
+            return true;
+        }
+
+        lastHitFrameByPair[key] = frame;
+        return false;
+    }
+
+    /// <summary>
+    /// Kiểm tra GameObject (hoặc cha của nó) có phải là một Block hay không.
+    /// </summary>
+    public static bool IsBlockObject(GameObject obj)
+    {
+        if (obj == null) return false;
+
+        return obj.GetComponentInParent<BlockItem>() != null ||
+               obj.GetComponentInParent<ArrowBlock>() != null ||
+               obj.GetComponentInParent<FreezableBlock>() != null ||
+               obj.GetComponentInParent<HitCountdownBoomBlock>() != null ||
+               obj.GetComponentInParent<TimeCountdownBoomBlock>() != null;
     }
 
     private void OnValidate()
     {
         AutoConnect();
-        if (hasBoom)
-        {
-            FreezableBlock freeze = GetComponent<FreezableBlock>();
-            if (freeze != null && freeze.isFrozen) { freeze.isFrozen = false; freeze.UpdateFreezeState(); EditorUtility.SetDirty(freeze); }
 
-            TimeCountdownBoomBlock timeBoom = GetComponent<TimeCountdownBoomBlock>();
-            if (timeBoom != null && timeBoom.hasBoom) { timeBoom.hasBoom = false; timeBoom.UpdateBoomState(); EditorUtility.SetDirty(timeBoom); }
-        }
 #if UNITY_EDITOR
-        if (!Application.isPlaying) { EditorApplication.delayCall -= SafeEditorUpdate; EditorApplication.delayCall += SafeEditorUpdate; }
+        if (!Application.isPlaying)
+        {
+            EditorApplication.delayCall -= SafeEditorUpdate;
+            EditorApplication.delayCall += SafeEditorUpdate;
+        }
 #endif
     }
 
 #if UNITY_EDITOR
-    private void OnDisableEditor() { EditorApplication.delayCall -= SafeEditorUpdate; }
-    public void SafeEditorUpdate() { if (this == null) return; EnsureNumberDisplay(); UpdateBoomState(); }
+    private void OnDisableEditor()
+    {
+        EditorApplication.delayCall -= SafeEditorUpdate;
+    }
+
+    public void SafeEditorUpdate()
+    {
+        if (this == null) return;
+        EnsureNumberDisplay();
+        UpdateBoomState();
+    }
 #endif
 
-    private void Reset() { hasBoom = false; hitCount = 3; AutoConnect(); EnsureNumberDisplay(); UpdateBoomState(); }
+    private void Reset()
+    {
+        hasBoom = false;
+        hitCount = 3;
+        AutoConnect();
+        EnsureNumberDisplay();
+        UpdateBoomState();
+    }
 
     public void AutoConnect()
     {
-        if (arrowBlock == null) arrowBlock = GetComponent<ArrowBlock>();
+        if (arrowBlock == null)
+        {
+            arrowBlock = GetComponent<ArrowBlock>();
+        }
+
         if (boomOverlay == null)
         {
-            Transform t = transform.Find("Boom Overlay") ?? transform.Find("BoomOverlay") ?? transform.Find("Boom") ?? transform.Find("Boom Block");
+            Transform t = transform.Find("Boom Overlay");
+            if (t == null) t = transform.Find("BoomOverlay");
+            if (t == null) t = transform.Find("Boom");
+            if (t == null) t = transform.Find("Boom Block");
             if (t != null) boomOverlay = t.gameObject;
         }
+
         if (sparkEffectObject == null && boomOverlay != null)
         {
             Transform t = boomOverlay.transform.Find("SparkEffect");
@@ -85,10 +201,12 @@ public class HitCountdownBoomBlock : MonoBehaviour
     public void EnsureNumberDisplay()
     {
         Transform parentTr = (boomOverlay != null) ? boomOverlay.transform : transform;
+
         if (numberRenderer == null)
         {
             Transform existing = parentTr.Find("BoomPixelNumber");
             if (existing != null) numberRenderer = existing.GetComponent<SpriteRenderer>();
+
             if (numberRenderer == null)
             {
                 GameObject numObj = new GameObject("BoomPixelNumber");
@@ -98,10 +216,14 @@ public class HitCountdownBoomBlock : MonoBehaviour
                 numberRenderer = numObj.AddComponent<SpriteRenderer>();
             }
         }
+
         if (numberRendererTens == null)
         {
             Transform existingTens = parentTr.Find("BoomPixelNumber_Tens");
-            if (existingTens != null) numberRendererTens = existingTens.GetComponent<SpriteRenderer>();
+            if (existingTens != null)
+            {
+                numberRendererTens = existingTens.GetComponent<SpriteRenderer>();
+            }
             else if (hitCount >= 10)
             {
                 GameObject tensObj = new GameObject("BoomPixelNumber_Tens");
@@ -111,45 +233,77 @@ public class HitCountdownBoomBlock : MonoBehaviour
                 numberRendererTens = tensObj.AddComponent<SpriteRenderer>();
             }
         }
+
         SpriteRenderer overlaySr = (boomOverlay != null) ? boomOverlay.GetComponent<SpriteRenderer>() : GetComponent<SpriteRenderer>();
         if (overlaySr != null)
         {
-            if (numberRenderer != null) { numberRenderer.sortingLayerID = overlaySr.sortingLayerID; numberRenderer.sortingOrder = overlaySr.sortingOrder + 2; }
-            if (numberRendererTens != null) { numberRendererTens.sortingLayerID = overlaySr.sortingLayerID; numberRendererTens.sortingOrder = overlaySr.sortingOrder + 2; }
+            if (numberRenderer != null)
+            {
+                numberRenderer.sortingLayerID = overlaySr.sortingLayerID;
+                numberRenderer.sortingOrder = overlaySr.sortingOrder + 2;
+            }
+            if (numberRendererTens != null)
+            {
+                numberRendererTens.sortingLayerID = overlaySr.sortingLayerID;
+                numberRendererTens.sortingOrder = overlaySr.sortingOrder + 2;
+            }
         }
     }
 
     public void UpdateBoomState()
     {
         if (isExploding) return;
-        if (boomOverlay != null && boomOverlay.activeSelf != hasBoom) boomOverlay.SetActive(hasBoom);
-        if (sparkEffectObject != null && sparkEffectObject.activeSelf != hasBoom) sparkEffectObject.SetActive(hasBoom);
+
+        if (boomOverlay != null && boomOverlay.activeSelf != hasBoom)
+        {
+            boomOverlay.SetActive(hasBoom);
+        }
+
+        if (sparkEffectObject != null)
+        {
+            if (sparkEffectObject.activeSelf != hasBoom)
+            {
+                sparkEffectObject.SetActive(hasBoom);
+            }
+        }
+
         UpdateCountDisplay();
     }
 
     public void UpdateCountDisplay()
     {
         bool shouldShow = hasBoom && hitCount > 0;
+
         if (shouldShow)
         {
             if (numberRenderer != null)
             {
-                if (!numberRenderer.gameObject.activeSelf) numberRenderer.gameObject.SetActive(true);
+                if (!numberRenderer.gameObject.activeSelf)
+                    numberRenderer.gameObject.SetActive(true);
+
                 if (hitCount < 10)
                 {
                     numberRenderer.transform.localPosition = new Vector3(0, 0, -0.1f);
                     numberRenderer.sprite = PixelNumberSprites.GetSprite(hitCount);
-                    if (numberRendererTens != null && numberRendererTens.gameObject.activeSelf) numberRendererTens.gameObject.SetActive(false);
+
+                    if (numberRendererTens != null && numberRendererTens.gameObject.activeSelf)
+                    {
+                        numberRendererTens.gameObject.SetActive(false);
+                    }
                 }
                 else
                 {
                     EnsureNumberDisplay();
+
                     if (numberRendererTens != null)
                     {
-                        if (!numberRendererTens.gameObject.activeSelf) numberRendererTens.gameObject.SetActive(true);
+                        if (!numberRendererTens.gameObject.activeSelf)
+                            numberRendererTens.gameObject.SetActive(true);
+
                         numberRendererTens.transform.localPosition = new Vector3(-0.16f, 0, -0.1f);
                         numberRendererTens.sprite = PixelNumberSprites.GetSprite(hitCount / 10);
                     }
+
                     numberRenderer.transform.localPosition = new Vector3(0.16f, 0, -0.1f);
                     numberRenderer.sprite = PixelNumberSprites.GetSprite(hitCount % 10);
                 }
@@ -157,23 +311,30 @@ public class HitCountdownBoomBlock : MonoBehaviour
         }
         else
         {
-            if (numberRenderer != null && numberRenderer.gameObject.activeSelf) numberRenderer.gameObject.SetActive(false);
-            if (numberRendererTens != null && numberRendererTens.gameObject.activeSelf) numberRendererTens.gameObject.SetActive(false);
+            if (numberRenderer != null && numberRenderer.gameObject.activeSelf)
+            {
+                numberRenderer.gameObject.SetActive(false);
+            }
+            if (numberRendererTens != null && numberRendererTens.gameObject.activeSelf)
+            {
+                numberRendererTens.gameObject.SetActive(false);
+            }
         }
     }
 
     public void SetBoom(bool active, int count = -1)
     {
         hasBoom = active;
-        if (hasBoom)
+
+        if (count >= 0)
         {
-            FreezableBlock freeze = GetComponent<FreezableBlock>();
-            if (freeze != null) freeze.SetFrozen(false);
-            TimeCountdownBoomBlock timeBoom = GetComponent<TimeCountdownBoomBlock>();
-            if (timeBoom != null) timeBoom.SetBoom(false);
+            hitCount = count;
         }
-        if (count >= 0) hitCount = count;
-        else if (hasBoom && hitCount <= 0) hitCount = 3;
+        else if (hasBoom && hitCount <= 0)
+        {
+            hitCount = 3;
+        }
+
         isExploding = false;
         UpdateBoomState();
     }
@@ -181,20 +342,37 @@ public class HitCountdownBoomBlock : MonoBehaviour
     public void TakeHit(int amount = 1)
     {
         if (!hasBoom || isExploding) return;
+
         hitCount -= amount;
         onHitCountChanged?.Invoke(hitCount);
-        if (hitCount <= 0) { hitCount = 0; UpdateCountDisplay(); TriggerBoom(); }
-        else { UpdateCountDisplay(); if (gameObject.activeInHierarchy) StartCoroutine(PlayHitRoutine()); }
+
+        if (hitCount <= 0)
+        {
+            hitCount = 0;
+            UpdateCountDisplay();
+            TriggerBoom();
+        }
+        else
+        {
+            UpdateCountDisplay();
+            if (gameObject.activeInHierarchy)
+            {
+                StartCoroutine(PlayHitRoutine());
+            }
+        }
     }
 
     private IEnumerator PlayHitRoutine()
     {
-        Transform t1 = numberRenderer != null ? numberRenderer.transform : null;
-        Transform t2 = numberRendererTens != null ? numberRendererTens.transform : null;
+        Transform t1 = (numberRenderer != null) ? numberRenderer.transform : null;
+        Transform t2 = (numberRendererTens != null) ? numberRendererTens.transform : null;
+
         Vector3 scalePunch = Vector3.one * 1.4f;
         if (t1 != null) t1.localScale = scalePunch;
         if (t2 != null) t2.localScale = scalePunch;
-        float elapsed = 0f, duration = 0.12f;
+
+        float elapsed = 0f;
+        float duration = 0.12f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
@@ -203,6 +381,7 @@ public class HitCountdownBoomBlock : MonoBehaviour
             if (t2 != null) t2.localScale = Vector3.Lerp(scalePunch, Vector3.one, t);
             yield return null;
         }
+
         if (t1 != null) t1.localScale = Vector3.one;
         if (t2 != null) t2.localScale = Vector3.one;
     }
@@ -211,7 +390,9 @@ public class HitCountdownBoomBlock : MonoBehaviour
     {
         isExploding = true;
         hasBoom = false;
+
         if (sparkEffectObject != null) sparkEffectObject.SetActive(false);
+
         onBoomExploded?.Invoke();
 
 #if UNITY_2023_1_OR_NEWER
@@ -219,72 +400,123 @@ public class HitCountdownBoomBlock : MonoBehaviour
 #else
         GameProgressManager progressManager = Object.FindObjectOfType<GameProgressManager>();
 #endif
-        if (progressManager != null) progressManager.TriggerLoseLevel(0.45f);
-        if (boomEffectPrefab != null) Instantiate(boomEffectPrefab, transform.position, Quaternion.identity);
+        if (progressManager != null)
+        {
+            progressManager.TriggerLoseLevel(0.45f);
+        }
+
+        if (boomEffectPrefab != null)
+        {
+            Instantiate(boomEffectPrefab, transform.position, Quaternion.identity);
+        }
 
         RemoveFromSpawner();
         transform.SetParent(null);
+
         SpriteRenderer mainSr = GetComponent<SpriteRenderer>();
         if (mainSr != null) mainSr.enabled = false;
         Collider2D col2d = GetComponent<Collider2D>();
         if (col2d != null) col2d.enabled = false;
+
         ArrowBlock arrow = GetComponent<ArrowBlock>();
         if (arrow != null) arrow.enabled = false;
 
-        if (gameObject.activeInHierarchy) StartCoroutine(BoomExplosionRoutine());
-        else DestroySelf();
+        if (gameObject.activeInHierarchy)
+        {
+            StartCoroutine(BoomExplosionRoutine());
+        }
+        else
+        {
+            DestroySelf();
+        }
     }
 
     private IEnumerator BoomExplosionRoutine()
     {
         if (numberRenderer != null) numberRenderer.gameObject.SetActive(false);
         if (numberRendererTens != null) numberRendererTens.gameObject.SetActive(false);
-        SpriteRenderer sr = boomOverlay != null ? boomOverlay.GetComponent<SpriteRenderer>() : null;
-        Sprite boomSprite = sr != null ? sr.sprite : null;
-        ColorUtility.TryParseHtmlString("#FD0505", out Color sparkColor);
-        if (boomOverlay != null) boomOverlay.SetActive(false);
+
+        SpriteRenderer sr = (boomOverlay != null) ? boomOverlay.GetComponent<SpriteRenderer>() : null;
+        Sprite boomSprite = (sr != null) ? sr.sprite : null;
+
+        Color sparkColor;
+        ColorUtility.TryParseHtmlString("#FD0505", out sparkColor);
+
+        if (boomOverlay != null)
+        {
+            boomOverlay.SetActive(false);
+        }
 
         int particleCount = 26;
         GameObject[] particles = new GameObject[particleCount];
         Vector2[] velocities = new Vector2[particleCount];
+
         Texture2D squareTex = CreateSquareTexture(4);
         Sprite partSprite = Sprite.Create(squareTex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+
         Vector3 spawnPos = boomOverlay != null ? boomOverlay.transform.position : transform.position;
 
         for (int i = 0; i < particleCount; i++)
         {
             GameObject p = new GameObject($"BoomParticle_{i}");
             p.transform.position = spawnPos;
+
             float scale = Random.Range(0.15f, 0.32f);
             p.transform.localScale = new Vector3(scale, scale, 1f);
+
             SpriteRenderer pSr = p.AddComponent<SpriteRenderer>();
-            pSr.sprite = boomSprite != null ? boomSprite : partSprite;
+            pSr.sprite = (boomSprite != null) ? boomSprite : partSprite;
             pSr.color = sparkColor;
-            if (sr != null) { pSr.sortingLayerID = sr.sortingLayerID; pSr.sortingOrder = sr.sortingOrder + 5; }
+
+            if (sr != null)
+            {
+                pSr.sortingLayerID = sr.sortingLayerID;
+                pSr.sortingOrder = sr.sortingOrder + 5;
+            }
+
             particles[i] = p;
+
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            velocities[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * Random.Range(4f, 8.5f);
+            float speed = Random.Range(4f, 8.5f);
+            velocities[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * speed;
         }
 
-        float duration = 0.45f, elapsed = 0f;
+        float duration = 0.45f;
+        float elapsed = 0f;
+
         while (elapsed < duration)
         {
             float dt = Time.deltaTime;
             elapsed += dt;
             float t = elapsed / duration;
+
             for (int i = 0; i < particleCount; i++)
             {
                 if (particles[i] != null)
                 {
                     particles[i].transform.position += (Vector3)(velocities[i] * dt);
                     velocities[i] *= (1f - dt * 3.5f);
+
                     SpriteRenderer pSr = particles[i].GetComponent<SpriteRenderer>();
-                    if (pSr != null) { Color c = pSr.color; c.a = Mathf.Lerp(1f, 0f, t); pSr.color = c; }
+                    if (pSr != null)
+                    {
+                        Color c = pSr.color;
+                        c.a = Mathf.Lerp(1f, 0f, t);
+                        pSr.color = c;
+                    }
                 }
             }
             yield return null;
         }
-        for (int i = 0; i < particleCount; i++) if (particles[i] != null) Destroy(particles[i]);
+
+        for (int i = 0; i < particleCount; i++)
+        {
+            if (particles[i] != null)
+            {
+                Destroy(particles[i]);
+            }
+        }
+
         DestroySelf();
     }
 
@@ -292,8 +524,12 @@ public class HitCountdownBoomBlock : MonoBehaviour
     {
         Texture2D tex = new Texture2D(size, size);
         Color[] colors = new Color[size * size];
-        for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
-        tex.SetPixels(colors); tex.Apply();
+        for (int i = 0; i < colors.Length; i++)
+        {
+            colors[i] = Color.white;
+        }
+        tex.SetPixels(colors);
+        tex.Apply();
         return tex;
     }
 
@@ -304,9 +540,17 @@ public class HitCountdownBoomBlock : MonoBehaviour
 #else
         BlockSpawner spawner = Object.FindObjectOfType<BlockSpawner>();
 #endif
-        if (spawner != null && arrowBlock != null) spawner.RemoveBlockFromList(arrowBlock);
+        if (spawner != null && arrowBlock != null)
+        {
+            spawner.RemoveBlockFromList(arrowBlock);
+        }
     }
-    private void DestroySelf() { RemoveFromSpawner(); Destroy(gameObject); }
+
+    private void DestroySelf()
+    {
+        RemoveFromSpawner();
+        Destroy(gameObject);
+    }
 }
 
 #if UNITY_EDITOR
@@ -316,25 +560,39 @@ public class HitCountdownBoomBlockEditor : Editor
     public override void OnInspectorGUI()
     {
         HitCountdownBoomBlock targetBlock = (HitCountdownBoomBlock)target;
-        FreezableBlock freeze = targetBlock.GetComponent<FreezableBlock>();
-        TimeCountdownBoomBlock timeBoom = targetBlock.GetComponent<TimeCountdownBoomBlock>();
-        if (targetBlock.hasBoom && ((freeze != null && freeze.isFrozen) || (timeBoom != null && timeBoom.hasBoom)))
-            EditorGUILayout.HelpBox("⚠️ CẢNH BÁO: Block đang bị xung đột cơ chế!", MessageType.Error);
 
         EditorGUI.BeginChangeCheck();
         DrawDefaultInspector();
-        if (EditorGUI.EndChangeCheck()) { targetBlock.AutoConnect(); EditorUtility.SetDirty(targetBlock); EditorApplication.delayCall -= targetBlock.SafeEditorUpdate; EditorApplication.delayCall += targetBlock.SafeEditorUpdate; }
+
+        if (EditorGUI.EndChangeCheck())
+        {
+            targetBlock.AutoConnect();
+            EditorUtility.SetDirty(targetBlock);
+
+            EditorApplication.delayCall -= targetBlock.SafeEditorUpdate;
+            EditorApplication.delayCall += targetBlock.SafeEditorUpdate;
+        }
 
         EditorGUILayout.Space(6);
-        if (targetBlock.hasBoom) EditorGUILayout.HelpBox($"💣 Block ĐANG GẮN BOOM (Số đếm = {targetBlock.hitCount})", MessageType.Warning);
-        else EditorGUILayout.HelpBox("✅ Block BÌNH THƯỜNG", MessageType.Info);
+        if (targetBlock.hasBoom)
+        {
+            EditorGUILayout.HelpBox($"💣 Block ĐANG GẮN BOOM (Số đếm = {targetBlock.hitCount})", MessageType.Warning);
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("✅ Block BÌNH THƯỜNG (Không gắn boom)", MessageType.Info);
+        }
 
-        if (GUILayout.Button(targetBlock.hasBoom ? "🛑 Tắt Boom" : "💣 Bật Boom", GUILayout.Height(30)))
+        EditorGUILayout.Space(4);
+        string btnText = targetBlock.hasBoom ? "🛑 Tắt Boom (Disable Boom)" : "💣 Bật Boom (Enable Boom)";
+        GUI.backgroundColor = targetBlock.hasBoom ? new Color(1f, 0.7f, 0.4f) : new Color(1f, 0.4f, 0.4f);
+        if (GUILayout.Button(btnText, GUILayout.Height(30)))
         {
             Undo.RecordObject(targetBlock, "Toggle Boom State");
             targetBlock.SetBoom(!targetBlock.hasBoom);
             EditorUtility.SetDirty(targetBlock);
         }
+
         GUI.backgroundColor = Color.white;
     }
 }
