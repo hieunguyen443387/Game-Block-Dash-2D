@@ -55,6 +55,15 @@ public static class GameDataService
         return session;
     }
 
+    /// <summary>
+    /// Level hiện tại đang lưu trong PlayerPrefs (đọc nhanh, không cần parse JSON).
+    /// Dùng cho các UI hiển thị số level như PixelNumberDisplay (Main Menu và trong game).
+    /// </summary>
+    public static int GetSavedLevel()
+    {
+        return PlayerPrefs.GetInt(PREF_CURRENT_LEVEL, 1);
+    }
+
     public static void ClearActiveSession(int nextLevel)
     {
         PlayerPrefs.DeleteKey(PREF_SESSION_KEY);
