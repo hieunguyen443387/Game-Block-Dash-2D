@@ -62,13 +62,12 @@ public class BoosterController : MonoBehaviour
     {
         if (currentActiveBooster == null) return;
 
-        // Tránh việc cú click bấm nút kích hoạt booster ở UI bị tính luôn là click chọn block trong cùng 1 frame
         if (Time.frameCount == activationFrame) return;
 
         bool pointerDown = false;
         Vector2 screenPos = Vector2.zero;
 
-#if ENABLE_INPUT_SYSTEM
+    #if ENABLE_INPUT_SYSTEM
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
             pointerDown = true;
@@ -79,13 +78,13 @@ public class BoosterController : MonoBehaviour
             pointerDown = true;
             screenPos = Touchscreen.current.primaryTouch.position.ReadValue();
         }
-#elif ENABLE_LEGACY_INPUT_MANAGER
+    #elif ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetMouseButtonDown(0))
         {
             pointerDown = true;
             screenPos = Input.mousePosition;
         }
-#endif
+    #endif
 
         if (pointerDown)
         {
@@ -99,9 +98,11 @@ public class BoosterController : MonoBehaviour
             {
                 Vector2 worldPoint = cam.ScreenToWorldPoint(screenPos);
                 Collider2D hit = Physics2D.OverlapPoint(worldPoint);
+
                 if (hit != null)
                 {
                     BlockItem blockItem = hit.GetComponentInParent<BlockItem>();
+
                     if (blockItem != null)
                     {
                         OnBlockClicked(blockItem);

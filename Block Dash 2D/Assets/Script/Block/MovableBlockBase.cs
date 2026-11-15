@@ -123,25 +123,34 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
     /// <summary>
     /// Xử lý click từ Unity EventSystem (UI / 2D Physics Raycaster).
     /// </summary>
+    
     public virtual void OnPointerDown(PointerEventData eventData)
     {
-        // 🔹 Chặn click nếu đang trỏ vào UI (Popup, Setting, Button,...)
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+        if (EventSystem.current != null &&
+            EventSystem.current.IsPointerOverGameObject())
+            return;
 
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
+        // Chặn xử lý click nhiều lần trong cùng một frame
+        if (Time.frameCount == lastClickFrame)
+            return;
+
+        // Đánh dấu ngay khi nhận click, kể cả khi đang dùng Booster
+        lastClickFrame = Time.frameCount;
+
+        if (BoosterController.Instance != null &&
+            BoosterController.Instance.IsAnyBoosterActive())
         {
             BoosterController.Instance.OnBlockClicked(this);
             return;
         }
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
+
         OnBlockClicked();
     }
 
+    
     protected void CheckClickAtScreenPosition(Vector2 screenPosition)
     {
-        // 🔹 Chặn click nếu đang trỏ vào UI (Hỗ trợ an toàn cho cả Input System mới và cũ)
-#if ENABLE_INPUT_SYSTEM
+    #if ENABLE_INPUT_SYSTEM
         if (Touchscreen.current != null)
         {
             foreach (var touch in Touchscreen.current.touches)
@@ -149,47 +158,75 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
                 if (touch.press.isPressed)
                 {
                     int touchId = touch.touchId.ReadValue();
-                    if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject(touchId)) return;
+
+                    if (EventSystem.current != null &&
+                        EventSystem.current.IsPointerOverGameObject(touchId))
+                        return;
                 }
             }
         }
-#endif
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+    #endif
 
-        if (Time.frameCount == lastClickFrame) return;
+        if (EventSystem.current != null &&
+            EventSystem.current.IsPointerOverGameObject())
+            return;
+
+        if (Time.frameCount == lastClickFrame)
+            return;
 
         Camera cam = Camera.main;
-        if (cam != null && myCollider != null)
-        {
-            Vector2 mouseWorld = cam.ScreenToWorldPoint(screenPosition);
-            if (myCollider.OverlapPoint(mouseWorld))
-            {
-                if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
-                {
-                    BoosterController.Instance.OnBlockClicked(this);
-                    return;
-                }
-                lastClickFrame = Time.frameCount;
-                OnBlockClicked();
-            }
-        }
-    }
 
-#if ENABLE_LEGACY_INPUT_MANAGER
-    protected virtual void OnMouseDown()
-    {
-        // 🔹 Chặn click nếu đang trỏ vào UI
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+        if (cam == null || myCollider == null)
+            return;
 
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
+        Vector2 mouseWorld = cam.ScreenToWorldPoint(screenPosition);
+
+        if (!myCollider.OverlapPoint(mouseWorld))
+            return;
+
+        // Đánh dấu click trước khi xử lý Booster
+        lastClickFrame = Time.frameCount;
+
+        if (BoosterController.Instance != null &&
+            BoosterController.Instance.IsAnyBoosterActive())
         {
             BoosterController.Instance.OnBlockClicked(this);
             return;
         }
-        if (Time.frameCount == lastClickFrame) return;
-        lastClickFrame = Time.frameCount;
+
         OnBlockClicked();
     }
+
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+    
+#if ENABLE_LEGACY_INPUT_MANAGER
+    #if ENABLE_LEGACY_INPUT_MANAGER
+    #if ENABLE_LEGACY_INPUT_MANAGER
+    protected virtual void OnMouseDown()
+    {
+        if (EventSystem.current != null &&
+            EventSystem.current.IsPointerOverGameObject())
+            return;
+
+        if (Time.frameCount == lastClickFrame)
+            return;
+
+        lastClickFrame = Time.frameCount;
+
+        if (BoosterController.Instance != null &&
+            BoosterController.Instance.IsAnyBoosterActive())
+        {
+            BoosterController.Instance.OnBlockClicked(this);
+            return;
+        }
+
+        OnBlockClicked();
+    }
+#endif
+    #endif
+#endif
+
 #endif
 
     /// <summary>

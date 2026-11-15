@@ -23,7 +23,15 @@ public class GameProgressManager : MonoBehaviour
 
     private void Start()
     {
+        // 🔹 Ép buộc reset trạng thái khi khởi động game mới
+        hasReturnedFromGame = false;
+
+        // 🔹 Đọc session hiện tại
         currentSession = GameDataService.LoadSession();
+
+        // ❌ HÃY XÓA HOẶC COMMENT DÒNG NÀY ĐI ĐỂ KHÔNG BỊ XÓA SESSION LẦN ĐẦU:
+        // GameDataService.ClearActiveSession(currentSession.currentLevel);
+        // currentSession = GameDataService.LoadSession();
 
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
         if (inGamePanel != null) inGamePanel.SetActive(false);
@@ -54,7 +62,9 @@ public class GameProgressManager : MonoBehaviour
 
         currentSession = GameDataService.LoadSession();
 
-        if (hasReturnedFromGame && currentSession.hasActiveSession && currentSession.savedBlocks != null && currentSession.savedBlocks.Count > 0)
+        // 🔹 SỬA LẠI ĐIỀU KIỆN TẠI ĐÂY: Miễn là có session dở dang và có block lưu thì phục hồi, 
+        // không phụ thuộc vào việc vừa bấm Back hay vừa mở game nữa.
+        if (currentSession.hasActiveSession && currentSession.savedBlocks != null && currentSession.savedBlocks.Count > 0)
         {
             RestoreSavedSession();
         }
@@ -126,7 +136,9 @@ public class GameProgressManager : MonoBehaviour
 
     public void SaveCurrentSession()
     {
-        if (blocksContainer == null) return;
+        // 🔹 Tự động lấy container từ mapLoader nếu blocksContainer trên Inspector chưa được gán
+        Transform targetContainer = blocksContainer != null ? blocksContainer : (mapLoader != null ? mapLoader.blocksContainer : null);
+        if (targetContainer == null) return;
 
         List<SavedBlockState> blocksToSave = new List<SavedBlockState>();
 
@@ -267,7 +279,13 @@ public class GameProgressManager : MonoBehaviour
     public void ReturnToMainMenu()
     {
         SaveCurrentSession();
-        hasReturnedFromGame = true;
+        
+        // 🔹 BẮT BUỘC THÊM DÒNG NÀY: Cập nhật lại biến currentSession trên RAM ngay lập tức
+        // để MainMenuUI đọc được trạng thái hasActiveSession = true vừa lưu!
+        currentSession = GameDataService.LoadSession();
+        
+        // 🔹 Đánh dấu là vừa từ trong game back ra để Main Menu hiện nút Continue
+        hasReturnedFromGame = true; 
 
         if (mapLoader != null) mapLoader.ClearMap();
 

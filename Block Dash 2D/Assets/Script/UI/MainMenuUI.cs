@@ -17,15 +17,12 @@ public class MainMenuUI : MonoBehaviour
             progressManager = Object.FindObjectOfType<GameProgressManager>();
 #endif
         }
-
-        // 🔹 Đảm bảo khi mới vào game, cờ này luôn là false để hiện nút Play/Level đầu tiên
-        GameProgressManager.hasReturnedFromGame = false;
     }
 
     private void OnEnable()
     {
-        // 🔹 Ép reset lại cờ này mỗi khi MainMenuPanel được bật lên lần đầu
-        GameProgressManager.hasReturnedFromGame = false;
+        // ❌ XÓA BỎ dòng reset 'GameProgressManager.hasReturnedFromGame = false;' ở đây 
+        // để không bị ghi đè trạng thái khi bấm Back từ trong game ra!
         RefreshUI();
     }
 
@@ -45,6 +42,7 @@ public class MainMenuUI : MonoBehaviour
 
         bool showContinue = GameProgressManager.hasReturnedFromGame && session.hasActiveSession && session.savedBlocks != null && session.savedBlocks.Count > 0;
 
+        // 🔹 Sửa lại phần này: Nút Continue hiển thị khi showContinue = true, nút Play hiển thị khi ngược lại
         if (playButtonObj != null) playButtonObj.SetActive(!showContinue);
         if (continueButtonObj != null) continueButtonObj.SetActive(showContinue);
     }
