@@ -260,14 +260,39 @@ public class GameProgressManager : MonoBehaviour
         }
     }
 
-    public void TriggerLoseLevel()
+    // 🔹 Thêm tham số delay vào TriggerLoseLevel
+    public void TriggerLoseLevel(float delay = 0f)
     {
         if (!isPlaying) return;
         isPlaying = false;
 
         if (inGamePanel != null) inGamePanel.SetActive(false);
-        GameDataService.ClearActiveSession(currentSession.currentLevel);
 
+        // 🔹 THAY VÌ XÓA SESSION (ClearActiveSession), HÃY LƯU LẠI TRẠNG THÁI HIỆN TẠI.
+        // Lúc này quả bom đã bị hủy (DestroySelf) nên danh sách block lưu trữ sẽ KHÔNG CÒN quả bom đó nữa.
+        SaveCurrentSession();
+
+        if (losePanel != null)
+        {
+            if (delay > 0f)
+            {
+                StartCoroutine(DelayedShowLosePanel(delay));
+            }
+            else
+            {
+                ShowLosePanelDirectly();
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator DelayedShowLosePanel(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        ShowLosePanelDirectly();
+    }
+
+    private void ShowLosePanelDirectly()
+    {
         if (losePanel != null)
         {
             losePanel.SetActive(true);
