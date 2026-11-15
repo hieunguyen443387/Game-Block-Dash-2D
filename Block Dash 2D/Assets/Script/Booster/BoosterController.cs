@@ -14,6 +14,13 @@ public class BoosterController : MonoBehaviour
 
     private MonoBehaviour currentActiveBooster;
     private int lastActionFrame = -1;
+
+    /// <summary>
+    /// True nếu một block vừa được xử lý bởi booster trong frame hiện tại.
+    /// Dùng để block không kích hoạt cơ chế di chuyển ngay sau khi booster vừa thực thi
+    /// (tránh trường hợp cùng một cú click vừa dùng booster vừa làm block chạy).
+    /// </summary>
+    public bool IsBlockClickConsumedThisFrame => Time.frameCount == lastActionFrame;
     
     // Đánh dấu thời điểm bật booster để tránh nhầm lẫn click kích hoạt nút với click chọn block
     private int activationFrame = -1; 
@@ -106,7 +113,12 @@ public class BoosterController : MonoBehaviour
                     if (blockItem != null)
                     {
                         OnBlockClicked(blockItem);
+
+                        // Chỉ reset input legacy khi project có bật Input Manager cũ.
+                        // Nếu project chỉ dùng Input System mới, gọi Input.ResetInputAxes() sẽ ném exception.
+#if ENABLE_LEGACY_INPUT_MANAGER
                         Input.ResetInputAxes();
+#endif
                     }
                 }
             }

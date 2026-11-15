@@ -137,11 +137,17 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
         // Đánh dấu ngay khi nhận click, kể cả khi đang dùng Booster
         lastClickFrame = Time.frameCount;
 
-        if (BoosterController.Instance != null &&
-            BoosterController.Instance.IsAnyBoosterActive())
+        if (BoosterController.Instance != null)
         {
-            BoosterController.Instance.OnBlockClicked(this);
-            return;
+            // Click này đã được booster xử lý trong cùng frame -> không di chuyển block
+            if (BoosterController.Instance.IsBlockClickConsumedThisFrame)
+                return;
+
+            if (BoosterController.Instance.IsAnyBoosterActive())
+            {
+                BoosterController.Instance.OnBlockClicked(this);
+                return;
+            }
         }
 
         OnBlockClicked();
@@ -187,11 +193,17 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
         // Đánh dấu click trước khi xử lý Booster
         lastClickFrame = Time.frameCount;
 
-        if (BoosterController.Instance != null &&
-            BoosterController.Instance.IsAnyBoosterActive())
+        if (BoosterController.Instance != null)
         {
-            BoosterController.Instance.OnBlockClicked(this);
-            return;
+            // Click này đã được booster xử lý trong cùng frame -> không di chuyển block
+            if (BoosterController.Instance.IsBlockClickConsumedThisFrame)
+                return;
+
+            if (BoosterController.Instance.IsAnyBoosterActive())
+            {
+                BoosterController.Instance.OnBlockClicked(this);
+                return;
+            }
         }
 
         OnBlockClicked();
@@ -214,11 +226,17 @@ public abstract class MovableBlockBase : BlockItem, IPointerDownHandler
 
         lastClickFrame = Time.frameCount;
 
-        if (BoosterController.Instance != null &&
-            BoosterController.Instance.IsAnyBoosterActive())
+        if (BoosterController.Instance != null)
         {
-            BoosterController.Instance.OnBlockClicked(this);
-            return;
+            // Click này đã được booster xử lý trong cùng frame -> không di chuyển block
+            if (BoosterController.Instance.IsBlockClickConsumedThisFrame)
+                return;
+
+            if (BoosterController.Instance.IsAnyBoosterActive())
+            {
+                BoosterController.Instance.OnBlockClicked(this);
+                return;
+            }
         }
 
         OnBlockClicked();

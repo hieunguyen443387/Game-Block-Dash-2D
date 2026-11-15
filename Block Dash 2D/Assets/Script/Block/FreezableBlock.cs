@@ -301,19 +301,31 @@ public class FreezableBlock : MonoBehaviour, IPointerDownHandler
     public void Unfreeze() { freezeCount = 0; BreakIce(); }
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
+        if (BoosterController.Instance != null)
         {
-            BlockItem item = GetComponentInParent<BlockItem>();
-            if (item != null) { BoosterController.Instance.OnBlockClicked(item); return; }
+            // Click đã được booster xử lý trong frame này -> không kích hoạt di chuyển block
+            if (BoosterController.Instance.IsBlockClickConsumedThisFrame) return;
+
+            if (BoosterController.Instance.IsAnyBoosterActive())
+            {
+                BlockItem item = GetComponentInParent<BlockItem>();
+                if (item != null) { BoosterController.Instance.OnBlockClicked(item); return; }
+            }
         }
         if (arrowBlock != null && arrowBlock.gameObject != gameObject) arrowBlock.OnPointerDown(eventData);
     }
     private void OnMouseDown()
     {
-        if (BoosterController.Instance != null && BoosterController.Instance.IsAnyBoosterActive())
+        if (BoosterController.Instance != null)
         {
-            BlockItem item = GetComponentInParent<BlockItem>();
-            if (item != null) { BoosterController.Instance.OnBlockClicked(item); return; }
+            // Click đã được booster xử lý trong frame này -> không kích hoạt di chuyển block
+            if (BoosterController.Instance.IsBlockClickConsumedThisFrame) return;
+
+            if (BoosterController.Instance.IsAnyBoosterActive())
+            {
+                BlockItem item = GetComponentInParent<BlockItem>();
+                if (item != null) { BoosterController.Instance.OnBlockClicked(item); return; }
+            }
         }
         if (arrowBlock != null && arrowBlock.gameObject != gameObject) arrowBlock.TriggerMove();
     }
