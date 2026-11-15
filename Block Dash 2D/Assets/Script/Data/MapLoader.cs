@@ -96,6 +96,16 @@ public class MapLoader : MonoBehaviour
         maxAvailableLevel = highestLevel;
     }
 
+    /// <summary>
+    /// Trả về level cao nhất hiện có trong thư mục Levels (tự quét lại mỗi lần gọi).
+    /// Dùng để chặn tiến trình vượt quá level cuối cùng.
+    /// </summary>
+    public int GetMaxAvailableLevel()
+    {
+        AutoDetectMaxLevel();
+        return maxAvailableLevel;
+    }
+
     // =========================================================================
     // CÁC HÀM XỬ LÝ CHO SETTING POPUP (CHỌN LEVEL & RESTART)
     // =========================================================================

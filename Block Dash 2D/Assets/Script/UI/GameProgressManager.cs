@@ -53,6 +53,24 @@ public class GameProgressManager : MonoBehaviour
 
     public GameSessionData GetCurrentSession() => currentSession;
 
+    /// <summary>
+    /// Level sẽ chơi sau khi thắng level hiện tại (level vừa thắng + 1).
+    /// Nếu đã là level cuối cùng thì trả về chính level đó để chơi lại.
+    /// </summary>
+    public int GetNextLevelAfterWin()
+    {
+        int completedLevel = currentSession != null ? currentSession.currentLevel : 1;
+        int nextLevel = completedLevel + 1;
+
+        if (mapLoader != null)
+        {
+            int maxLevel = mapLoader.GetMaxAvailableLevel();
+            if (nextLevel > maxLevel) nextLevel = maxLevel;
+        }
+
+        return nextLevel;
+    }
+
     public void StartPlaySession()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
@@ -258,7 +276,9 @@ public class GameProgressManager : MonoBehaviour
     {
         if (inGamePanel != null) inGamePanel.SetActive(false);
         hasReturnedFromGame = false;
-        GameDataService.ClearActiveSession(currentSession.currentLevel + 1);
+
+        // Đánh dấu đã hoàn thành level này: xóa session dở và ghi nhớ level kế tiếp vào PlayerPrefs
+        GameDataService.ClearActiveSession(GetNextLevelAfterWin());
 
         if (winPanel != null)
         {
@@ -337,9 +357,14 @@ public class GameProgressManager : MonoBehaviour
     public void ReturnHomeFromWin()
     {
         hasReturnedFromGame = false; // Đảm bảo không hiện nút Continue ở Main Menu
-        
-        // Xóa sạch session của level vừa hoàn thành để lần sau vào chơi level mới
-        GameDataService.ClearActiveSession(currentSession.currentLevel);
+
+        // 🔹 LƯU TIẾN TRÌNH: level vừa thắng đã hoàn thành -> mở level kế tiếp.
+        // Trước đây hàm này xóa session tại currentSession.currentLevel (level CŨ) nên ghi đè
+        // ngược tiến trình mà TriggerWinLevel() vừa lưu -> vào chơi lại đúng level vừa thắng.
+        GameDataService.ClearActiveSession(GetNextLevelAfterWin());
+
+        // 🔹 Nạp lại session trên RAM để Main Menu hiển thị đúng level kế tiếp
+        currentSession = GameDataService.LoadSession();
 
         if (mapLoader != null)
         {

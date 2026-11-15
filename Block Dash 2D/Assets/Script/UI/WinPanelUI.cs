@@ -1,4 +1,3 @@
-using System.IO;
 using UnityEngine;
 using TMPro;
 
@@ -19,13 +18,9 @@ public class WinPanelUI : MonoBehaviour
     public void OnClickNextLevel()
     {
         if (progressManager == null) return;
-        GameSessionData session = progressManager.GetCurrentSession();
-        
-        int nextLevel = session.currentLevel + 1;
-        string nextMapPath = Path.Combine(Application.persistentDataPath, "Levels", "Level_" + nextLevel + ".txt");
-        if (!File.Exists(nextMapPath)) nextLevel = session.currentLevel; 
 
-        progressManager.StartLevelAt(nextLevel);
+        // Lấy level kế tiếp (đã được chặn ở level cuối) từ GameProgressManager
+        progressManager.StartLevelAt(progressManager.GetNextLevelAfterWin());
     }
 
     // Gắn vào sự kiện OnClick của nút Home trên Win Panel
