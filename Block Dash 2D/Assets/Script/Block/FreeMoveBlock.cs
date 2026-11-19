@@ -167,6 +167,11 @@ public class FreeMoveBlock : MovableBlockBase
                 hit.transform.IsChildOf(transform);
 
             if (isSelf) continue;
+            if (transform.IsChildOf(hit.transform)) continue;
+
+            // Báo va chạm cho CẢ HAI phía giống ArrowBlock/TwoWayBlock
+            // (nếu một trong hai là bom đếm lượt thì mới trừ số đếm).
+            HitCountdownBoomBlock.NotifyCollision(gameObject, hit.gameObject);
 
             Log($"Ô ({cell.x},{cell.y}) bị chặn bởi: {hit.name}");
 
@@ -268,6 +273,9 @@ public class FreeMoveBlock : MovableBlockBase
 
         Vector2Int startCell = WorldToGrid(transform.position);
         if (!IsInsideBoard(startCell)) return;
+
+        // Đồng bộ Physics2D trước khi quét BFS để không đọc vị trí collider cũ
+        Physics2D.SyncTransforms();
 
         List<Vector2Int> path = FindPathToEdge(startCell);
 

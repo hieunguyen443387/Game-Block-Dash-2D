@@ -11,6 +11,28 @@ public class BlockSpawner : MonoBehaviour
         public GameObject blockPrefab;
     }
 
+    /// <summary>Một cách đặt block trong lưới full map: cặp 2 ô + hướng xoay tương ứng.</summary>
+    private class GridPlacementOption
+    {
+        public readonly Transform secondCell;
+        public readonly string secondCellName;
+        public readonly float rotationZ;
+
+        public GridPlacementOption(Transform secondCell, string secondCellName, float rotationZ)
+        {
+            this.secondCell = secondCell;
+            this.secondCellName = secondCellName;
+            this.rotationZ = rotationZ;
+        }
+    }
+
+    /// <summary>Thông tin block đã đặt, dùng để tránh spawn ra 2 block đối đầu nhau.</summary>
+    private class PlacedBlockInfo
+    {
+        public Vector2 position;
+        public Vector2 direction;
+    }
+
     [Header("Block List")]
     public List<BlockOption> blockList = new List<BlockOption>();
 
@@ -27,6 +49,8 @@ public class BlockSpawner : MonoBehaviour
     public float cellSize = 1f;
     [Tooltip("Tự động xoay ngẫu nhiên các hướng (0, 90, 180, 270 độ) khi tạo full map")]
     public bool randomRotationOnGridSpawn = true;
+    [Tooltip("Không tạo ra 2 block có hướng di chuyển đâm thẳng vào nhau (đối đầu trực diện)")]
+    public bool avoidHeadOnBlocks = true;
 
     [Header("Freeze Settings")]
     [Tooltip("Tự động đóng băng khối khi vừa được tạo ra")]
@@ -134,6 +158,7 @@ public class BlockSpawner : MonoBehaviour
         }
 
         int spawnedCount = 0;
+        List<PlacedBlockInfo> placedBlocks = new List<PlacedBlockInfo>();
 
         foreach (var kvp in cellLookup)
         {
@@ -141,7 +166,7 @@ public class BlockSpawner : MonoBehaviour
             if (occupiedCells[cellName]) continue;
 
             Transform currentCell = kvp.Value;
-            
+
             string[] parts = cellName.Split('_');
             if (parts.Length < 3) continue;
 
@@ -154,19 +179,66 @@ public class BlockSpawner : MonoBehaviour
             bool canPlaceHorizontal = cellLookup.ContainsKey(rightCellName) && !occupiedCells[rightCellName];
             bool canPlaceVertical = cellLookup.ContainsKey(topCellName) && !occupiedCells[topCellName];
 
-            if (!canPlaceHorizontal && !canPlaceVertical) 
+            if (!canPlaceHorizontal && !canPlaceVertical)
             {
-                continue; 
+                continue;
             }
 
-            bool isHorizontal = canPlaceHorizontal && (!canPlaceVertical || Random.value > 0.5f);
+            // Kích thước 1 ô cờ (world units) để xác định 2 block có nằm "cùng làn" hay không
+            Transform referenceNeighbor = canPlaceHorizontal ? cellLookup[rightCellName] : cellLookup[topCellName];
+            float stepSize = Mathf.Max(0.0001f, Vector3.Distance(currentCell.position, referenceNeighbor.position));
 
-            Transform secondCell = isHorizontal ? cellLookup[rightCellName] : cellLookup[topCellName];
-            string secondCellName = isHorizontal ? rightCellName : topCellName;
+            // Mỗi cặp ô có 2 hướng xoay. Nếu hướng của cặp ngang bị đối đầu thì thử cặp dọc (và ngược lại).
+            List<GridPlacementOption> options = new List<GridPlacementOption>();
 
-            Vector3 spawnPos = (currentCell.position + secondCell.position) / 2f;
+            if (canPlaceHorizontal)
+            {
+                options.Add(new GridPlacementOption(cellLookup[rightCellName], rightCellName, 0f));   // sang phải
+                options.Add(new GridPlacementOption(cellLookup[rightCellName], rightCellName, 180f)); // sang trái
+            }
 
-            float rotZ = isHorizontal ? (Random.value > 0.5f ? 0f : 180f) : (Random.value > 0.5f ? 90f : 270f);
+            if (canPlaceVertical)
+            {
+                options.Add(new GridPlacementOption(cellLookup[topCellName], topCellName, 90f));  // đi lên
+                options.Add(new GridPlacementOption(cellLookup[topCellName], topCellName, 270f)); // đi xuống
+            }
+
+            // Xáo trộn để hướng tạo ra vẫn ngẫu nhiên như trước
+            for (int i = options.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                GridPlacementOption tmp = options[i];
+                options[i] = options[j];
+                options[j] = tmp;
+            }
+
+            GridPlacementOption chosen = null;
+            Vector3 spawnPos = Vector3.zero;
+
+            foreach (GridPlacementOption option in options)
+            {
+                Vector3 candidatePos = (currentCell.position + option.secondCell.position) / 2f;
+                Vector2 candidateDir = RotationToDirectionVector(option.rotationZ);
+
+                // Bỏ qua hướng sẽ đâm thẳng vào một block đã đặt trước đó
+                if (avoidHeadOnBlocks && WouldBlockHeadOn(candidatePos, candidateDir, stepSize, placedBlocks))
+                    continue;
+
+                chosen = option;
+                spawnPos = candidatePos;
+                break;
+            }
+
+            if (chosen == null)
+            {
+                // Cả 2 cặp ô đều chỉ tạo ra hướng đối đầu -> để trống, các lượt sau có thể lấp bằng cặp khác
+                continue;
+            }
+
+            Transform secondCell = chosen.secondCell;
+            string secondCellName = chosen.secondCellName;
+
+            float rotZ = chosen.rotationZ;
             Quaternion spawnRot = Quaternion.Euler(0f, 0f, rotZ);
 
             GameObject newBlock = Instantiate(
@@ -183,6 +255,13 @@ public class BlockSpawner : MonoBehaviour
 
             occupiedCells[cellName] = true;
             occupiedCells[secondCellName] = true;
+
+            // Ghi nhận block vừa đặt để các block sau không chọn hướng đâm thẳng vào nó
+            placedBlocks.Add(new PlacedBlockInfo
+            {
+                position = spawnPos,
+                direction = RotationToDirectionVector(rotZ)
+            });
 
             TwoWayBlock twoWay = newBlock.GetComponent<TwoWayBlock>();
             if (twoWay != null)
@@ -215,7 +294,62 @@ public class BlockSpawner : MonoBehaviour
             spawnedCount++;
         }
 
-        Debug.Log($"<color=green>Đã rải thành công {spawnedCount} Arrow Block (2 cell) khít bàn cờ, không bị chồng lấp!</color>");
+        string headOnNote = avoidHeadOnBlocks ? ", không đối đầu trực diện" : "";
+        Debug.Log($"<color=green>Đã rải thành công {spawnedCount} Arrow Block (2 cell) khít bàn cờ, không bị chồng lấp{headOnNote}!</color>");
+    }
+
+    /// <summary>
+    /// Chuyển góc xoay Z của block thành vector hướng di chuyển (khớp với ArrowDirection).
+    /// </summary>
+    private static Vector2 RotationToDirectionVector(float rotationZ)
+    {
+        float z = Mathf.Repeat(rotationZ, 360f);
+        int quarter = Mathf.RoundToInt(z / 90f) % 4;
+
+        switch (quarter)
+        {
+            case 1:  return Vector2.up;
+            case 2:  return Vector2.left;
+            case 3:  return Vector2.down;
+            default: return Vector2.right;
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra nếu đặt block tại 'position' với hướng 'direction' thì nó sẽ đâm thẳng
+    /// vào một block đã đặt trước đó đang chĩa ngược lại (đối đầu trực diện).
+    /// </summary>
+    private static bool WouldBlockHeadOn(Vector2 position, Vector2 direction, float stepSize, List<PlacedBlockInfo> placedBlocks)
+    {
+        if (placedBlocks == null || placedBlocks.Count == 0) return false;
+
+        // Hai block được coi là cùng làn khi lệch ngang nhỏ hơn nửa ô cờ
+        // (block đặt ở tâm 2 ô nên có thể lệch đúng nửa ô giữa cặp ngang và cặp dọc)
+        float lateralLimit = stepSize * 0.55f;
+        Vector2 perpendicular = new Vector2(-direction.y, direction.x);
+
+        PlacedBlockInfo nearestInFront = null;
+        float nearestForward = float.MaxValue;
+
+        foreach (PlacedBlockInfo other in placedBlocks)
+        {
+            Vector2 delta = other.position - position;
+            float forward = Vector2.Dot(delta, direction);
+
+            if (forward <= stepSize * 0.01f) continue;                                  // không nằm phía trước
+            if (Mathf.Abs(Vector2.Dot(delta, perpendicular)) > lateralLimit) continue;  // khác làn
+
+            if (forward < nearestForward)
+            {
+                nearestForward = forward;
+                nearestInFront = other;
+            }
+        }
+
+        if (nearestInFront == null) return false;
+
+        // Chỉ tính là đối đầu khi block gần nhất phía trước cũng đang chĩa ngược về phía block mới
+        return Vector2.Dot(nearestInFront.direction, direction) < -0.5f;
     }
 
     public void AutoDetectBoard()

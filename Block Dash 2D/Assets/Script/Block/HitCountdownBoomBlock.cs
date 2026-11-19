@@ -40,6 +40,16 @@ public class HitCountdownBoomBlock : MonoBehaviour
     public UnityEvent onBoomExploded;
     public UnityEvent<int> onHitCountChanged;
 
+    [Header("5. Hiển thị số đếm")]
+    [Tooltip("Giữ số đếm luôn xuôi theo màn hình người chơi (không bị xoay theo block)")]
+    public bool keepNumberUpright = true;
+
+    [Tooltip("Vị trí số đơn vị so với tâm Overlay. Khi bật Keep Number Upright, X/Y tính theo trục màn hình")]
+    public Vector3 numberOffset = new Vector3(0f, 0f, -0.1f);
+
+    [Tooltip("Vị trí số hàng chục (chỉ dùng khi số >= 10). Khi bật Keep Number Upright, X/Y tính theo trục màn hình")]
+    public Vector3 tensOffset = new Vector3(-0.16f, 0f, -0.1f);
+
     private bool isExploding = false;
 
     /// <summary>Block đang trong quá trình nổ (đã bị loại khỏi bàn chơi, chờ hiệu ứng kết thúc)</summary>
@@ -57,6 +67,12 @@ public class HitCountdownBoomBlock : MonoBehaviour
         AutoConnect();
         EnsureNumberDisplay();
         UpdateBoomState();
+    }
+
+    private void LateUpdate()
+    {
+        // Chạy sau khi block/overlay đã xoay trong frame này -> số luôn được chỉnh lại cho xuôi
+        if (keepNumberUpright) ApplyUprightNumberTransform();
     }
 
     // =========================================================
@@ -286,7 +302,6 @@ public class HitCountdownBoomBlock : MonoBehaviour
 
                 if (hitCount < 10)
                 {
-                    numberRenderer.transform.localPosition = new Vector3(0, 0, -0.1f);
                     numberRenderer.sprite = PixelNumberSprites.GetSprite(hitCount);
 
                     if (numberRendererTens != null && numberRendererTens.gameObject.activeSelf)
@@ -303,11 +318,9 @@ public class HitCountdownBoomBlock : MonoBehaviour
                         if (!numberRendererTens.gameObject.activeSelf)
                             numberRendererTens.gameObject.SetActive(true);
 
-                        numberRendererTens.transform.localPosition = new Vector3(-0.16f, 0, -0.1f);
                         numberRendererTens.sprite = PixelNumberSprites.GetSprite(hitCount / 10);
                     }
 
-                    numberRenderer.transform.localPosition = new Vector3(0.16f, 0, -0.1f);
                     numberRenderer.sprite = PixelNumberSprites.GetSprite(hitCount % 10);
                 }
             }
@@ -323,6 +336,53 @@ public class HitCountdownBoomBlock : MonoBehaviour
                 numberRendererTens.gameObject.SetActive(false);
             }
         }
+
+        // Đặt vị trí + chỉnh hướng số ngay sau khi đã bật/tắt các chữ số
+        ApplyUprightNumberTransform();
+    }
+
+    /// <summary>
+    /// Đặt lại vị trí/xoay cho các chữ số để chúng luôn xuôi theo màn hình người chơi.
+    /// - Vị trí: offset thiết kế được quy đổi theo trục màn hình (phải/lên), nên số hàng chục
+    ///   luôn nằm bên trái số hàng đơn vị dù block xoay hướng nào.
+    /// - Xoay: đặt world rotation bằng rotation của camera để chữ không bị nghiêng/xoay theo block.
+    /// </summary>
+    private void ApplyUprightNumberTransform()
+    {
+        bool showTens = numberRendererTens != null && numberRendererTens.gameObject.activeSelf;
+
+        // Khi có 2 chữ số, số đơn vị lấy đối xứng X của hàng chục qua tâm overlay
+        Vector3 unitOffset = showTens
+            ? new Vector3(Mathf.Abs(tensOffset.x), tensOffset.y, tensOffset.z)
+            : numberOffset;
+
+        ApplyDigitTransform(numberRenderer, unitOffset);
+        ApplyDigitTransform(numberRendererTens, tensOffset);
+    }
+
+    private void ApplyDigitTransform(SpriteRenderer digitRenderer, Vector3 designOffset)
+    {
+        if (digitRenderer == null) return;
+
+        Transform digitTr = digitRenderer.transform;
+        Transform parentTr = digitTr.parent;
+
+        // Tắt tính năng -> giữ nguyên hành vi cũ (số xoay theo block)
+        if (!keepNumberUpright || parentTr == null)
+        {
+            digitTr.localPosition = designOffset;
+            digitTr.localRotation = Quaternion.identity;
+            return;
+        }
+
+        // Offset thiết kế đang theo trục của block -> đổi sang độ dài world rồi
+        // đưa về local space để world offset luôn nằm theo trục màn hình
+        Vector3 worldOffset = Vector3.Scale(designOffset, parentTr.lossyScale);
+        digitTr.localPosition = parentTr.InverseTransformVector(worldOffset);
+
+        // Không xoay theo block: chữ số song song với màn hình
+        Camera cam = Camera.main;
+        digitTr.rotation = (cam != null) ? cam.transform.rotation : Quaternion.identity;
     }
 
     public void SetBoom(bool active, int count = -1)

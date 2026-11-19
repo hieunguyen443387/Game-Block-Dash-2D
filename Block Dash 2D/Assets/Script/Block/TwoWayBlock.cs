@@ -183,6 +183,9 @@ public class TwoWayBlock : MovableBlockBase
         isMoving = true;
         float stepSize = GetStepSize();
         Vector2 dirVector = GetDirectionVector();
+
+        // Đảm bảo Physics2D thấy đúng vị trí mới nhất của mọi block trong frame này
+        Physics2D.SyncTransforms();
         Vector2Int gridStep = new Vector2Int(Mathf.RoundToInt(dirVector.x), Mathf.RoundToInt(dirVector.y));
 
         Vector2 startPos = transform.position;
@@ -245,32 +248,11 @@ public class TwoWayBlock : MovableBlockBase
                 }
             }
 
-            // Kiểm tra vật cản dựa trên kích thước Collider thực tế của block
-            Vector2 checkCenter;
-            Vector2 checkSize;
-
-            if (myCollider != null)
-            {
-                Bounds bounds = myCollider.bounds;
-
-                // Tâm kiểm tra nằm phía trước block một ô
-                checkCenter = (Vector2)bounds.center + dirVector * stepSize;
-
-                // Lấy kích thước collider, giảm nhẹ để tránh tính nhầm chính block này
-                checkSize = (Vector2)bounds.size * 0.95f;
-            }
-            else
-            {
-                checkCenter = nextWorldPos;
-                checkSize = Vector2.one * stepSize * 0.95f;
-            }
-
-            Collider2D[] hits = Physics2D.OverlapBoxAll(
-                checkCenter,
-                checkSize,
-                0f,
-                obstacleLayers
-            );
+            // Kiểm tra vật cản ngay tại ô kế tiếp (cách làm của ArrowBlock / RetreatArrowBlock).
+            // ❌ Không dùng myCollider.bounds làm vùng dò nữa: TwoWayBlock dài ~2 ô nên
+            // vùng dò bị kéo dài sang cả ô sau, dễ lệch khi block xoay 90/180/270 độ.
+            Vector2 checkSize = Vector2.one * stepSize * 0.75f;
+            Collider2D[] hits = Physics2D.OverlapBoxAll(nextWorldPos, checkSize, 0f, obstacleLayers);
 
             bool isBlocked = false;
 
@@ -280,12 +262,14 @@ public class TwoWayBlock : MovableBlockBase
 
                 if (ignoreTriggers && hit.isTrigger) continue;
 
-                // Bỏ qua collider của chính block hiện tại và các object con
+                // Bỏ qua collider của chính block hiện tại, object con và object cha
                 if (hit == myCollider) continue;
                 if (hit.transform == transform) continue;
                 if (hit.transform.IsChildOf(transform)) continue;
+                if (transform.IsChildOf(hit.transform)) continue;
 
                 isBlocked = true;
+                Debug.Log($"[TwoWayBlock] {name} bị chặn bởi {hit.name}");
 
                 // Báo va chạm cho CẢ HAI phía (block đang đâm và block bị đâm)
                 HitCountdownBoomBlock.NotifyCollision(gameObject, hit.gameObject);

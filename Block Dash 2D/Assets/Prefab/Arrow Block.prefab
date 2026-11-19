@@ -25,7 +25,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 872790344836248449}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -0.1}
   m_LocalScale: {x: 1.5, y: 1.5, z: 1}
   m_ConstrainProportionsScale: 0
@@ -533,7 +533,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6471317217833710148}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.16, y: -0.155, z: -0.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -998,6 +998,9 @@ MonoBehaviour:
   onHitCountChanged:
     m_PersistentCalls:
       m_Calls: []
+  keepNumberUpright: 1
+  numberOffset: {x: 0, y: 0, z: -0.1}
+  tensOffset: {x: -0.16, y: 0, z: -0.1}
 --- !u!114 &7778712238244403965
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1011,8 +1014,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TimeCountdownBoomBlock
   hasBoom: 0
-  countdownDuration: 1
-  remainingTime: 1
+  countdownDuration: 99
+  remainingTime: 99
   boomOverlay: {fileID: 5310976843609866405}
   sparkEffectObject: {fileID: 6827416882979521254}
   numberRenderer: {fileID: 2635772781712021375}
@@ -1025,3 +1028,6 @@ MonoBehaviour:
   onTimeChanged:
     m_PersistentCalls:
       m_Calls: []
+  keepNumberUpright: 1
+  numberOffset: {x: 0, y: -0.08, z: -0.1}
+  tensOffset: {x: -0.16, y: -0.155, z: -0.1}
